@@ -15,12 +15,14 @@ export class BranchService {
   async findAll() {
     return this.prisma.extended.branch.findMany({
       orderBy: { createdAt: 'desc' },
+      include: { taxConfig: true },
     });
   }
 
   async findOne(id: string) {
     const branch = await this.prisma.extended.branch.findUnique({
       where: { id },
+      include: { taxConfig: true },
     });
 
     if (!branch) {

@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Readable } from 'stream';
+import csv from 'csv-parser';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto, BranchPricingDto } from './dto/product.dto';
 
@@ -114,5 +116,58 @@ export class ProductService {
         include: { branchPricing: true },
       });
     });
+  }
+
+  // --- Bulk Import / Export ---
+
+  async bulkImport(fileBuffer: Buffer) {
+    const products: any[] = [];
+    return new Promise((resolve, reject) => {
+      Readable.from(fileBuffer)
+        .pipe(csv())
+        .on('data', (data: any) => products.push(data))
+        .on('end', async () => {
+          try {
+            let importedCount = 0;
+            // Simple sequential import (could be optimized with createMany if no nested relations)
+            for (const item of products) {
+              await this.prisma.extended.product.create({
+                data: {
+                  name: item.name,
+                  sku: item.sku || undefined,
+                  barcode: item.barcode || undefined,
+                  description: item.description || undefined,
+                  basePrice: parseFloat(item.basePrice) || 0,
+                  costPrice: item.costPrice ? parseFloat(item.costPrice) : undefined,
+                  trackInventory: item.trackInventory === 'true' || item.trackInventory === '1',
+                  isActive: item.isActive !== 'false' && item.isActive !== '0',
+                } as any,
+              });
+              importedCount++;
+            }
+            resolve({ success: true, count: importedCount });
+          } catch (error) {
+            reject(error);
+          }
+        })
+        .on('error', (error: any) => reject(error));
+    });
+  }
+
+  async exportCatalog() {
+    const products = await this.prisma.extended.product.findMany({
+      include: { category: true },
+    });
+
+    if (!products || products.length === 0) {
+      return 'name,sku,barcode,basePrice,costPrice,trackInventory,isActive,categoryName\n';
+    }
+
+    const headers = 'name,sku,barcode,basePrice,costPrice,trackInventory,isActive,categoryName\n';
+    const rows = products.map((p) => {
+      return `"${p.name}","${p.sku || ''}","${p.barcode || ''}",${p.basePrice},${p.costPrice || ''},${p.trackInventory},${p.isActive},"${p.category?.name || ''}"`;
+    }).join('\n');
+
+    return headers + rows;
   }
 }

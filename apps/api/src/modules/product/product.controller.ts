@@ -1,4 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, UseInterceptors, UploadedFile, Res } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto, BranchPricingDto } from './dto/product.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -39,6 +43,39 @@ export class ProductController {
   @Roles(UserRole.OWNER, UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.productService.remove(id);
+  }
+
+  @Post('import')
+  @UseInterceptors(FileInterceptor('file'))
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  async importProducts(@UploadedFile() file: Express.Multer.File) {
+    return this.productService.bulkImport(file.buffer);
+  }
+
+  @Get('export')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  async exportProducts(@Res() res: Response) {
+    const csv = await this.productService.exportCatalog();
+    res.header('Content-Type', 'text/csv');
+    res.attachment('products.csv');
+    return res.send(csv);
+  }
+
+  @Post('upload-image')
+  @UseInterceptors(FileInterceptor('image', {
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, 'product-' + uniqueSuffix + extname(file.originalname));
+      }
+    })
+  }))
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  uploadImage(@UploadedFile() file: Express.Multer.File) {
+    return {
+      url: `/uploads/${file.filename}`
+    };
   }
 
   @Patch(':id/branch-pricing')

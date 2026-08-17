@@ -4,7 +4,7 @@ services:
     container_name: salesk-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: salesk
       POSTGRES_PASSWORD: salesk_dev_password
