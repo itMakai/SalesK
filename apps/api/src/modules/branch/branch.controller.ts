@@ -40,4 +40,10 @@ export class BranchController {
   remove(@Param('id') id: string) {
     return this.branchService.remove(id);
   }
+
+  @Post(':id/payment-config')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  updatePaymentConfig(@Param('id') id: string, @Body() config: any) {
+    return this.branchService.updatePaymentConfig(id, config);
+  }
 }
