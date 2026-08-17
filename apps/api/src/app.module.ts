@@ -10,6 +10,7 @@ import { TenantMiddleware } from './common/middlewares/tenant.middleware';
 import { BranchModule } from './modules/branch/branch.module';
 import { CategoryModule } from './modules/category/category.module';
 import { ProductModule } from './modules/product/product.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { ProductModule } from './modules/product/product.module';
     AuthModule, 
     TenantModule, 
     UserModule, 
-    PrismaModule, BranchModule, CategoryModule, ProductModule
+    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule
   ],
   controllers: [AppController],
   providers: [AppService],
