@@ -2,9 +2,12 @@
 
 import { usePosStore } from "@/stores/pos-store";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, CreditCard, Banknote } from "lucide-react";
+import { Trash2, Plus, Minus, CreditCard, Banknote, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { apiClient } from "@/lib/api-client";
+import { ReceiptModal } from "./receipt-modal";
+import { useState } from "react";
 
 export function CartPanel() {
   const cart = usePosStore((state) => state.cart);
@@ -19,8 +22,47 @@ export function CartPanel() {
   const taxTotal = getTaxTotal();
   const total = getTotal();
 
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<any | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+
+  const handleCheckout = async (method: "cash" | "card" | "mpesa") => {
+    if (cart.length === 0) return;
+    setIsProcessing(true);
+    try {
+      const payload = {
+        branchId: "default-branch", // In a real app, fetch from auth store or context
+        type: "sale",
+        discountAmount: 0,
+        items: cart.map(item => ({
+          productId: item.productId,
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          tax: item.price * item.quantity * (item.taxRate / 100),
+          discount: 0,
+        })),
+        payments: [{
+          method,
+          amount: total,
+        }]
+      };
+
+      const res = await apiClient.post("/orders", payload);
+      setCompletedOrder(res.data);
+      setIsReceiptOpen(true);
+      clearCart();
+    } catch (error) {
+      console.error("Checkout failed:", error);
+      alert("Failed to process order.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
-    <div className="w-96 flex flex-col border-l bg-card h-full">
+    <>
+      <div className="w-96 flex flex-col border-l bg-card h-full">
       {/* Header */}
       <div className="p-4 border-b flex items-center justify-between shrink-0">
         <h2 className="font-bold text-lg">Current Order</h2>
@@ -99,14 +141,33 @@ export function CartPanel() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Button size="lg" variant="outline" className="w-full" disabled={cart.length === 0}>
-            <Banknote className="w-4 h-4 mr-2" /> Cash
+          <Button 
+            size="lg" 
+            variant="outline" 
+            className="w-full" 
+            disabled={cart.length === 0 || isProcessing}
+            onClick={() => handleCheckout("cash")}
+          >
+            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Banknote className="w-4 h-4 mr-2" />} 
+            Cash
           </Button>
-          <Button size="lg" className="w-full" disabled={cart.length === 0}>
-            <CreditCard className="w-4 h-4 mr-2" /> Pay
+          <Button 
+            size="lg" 
+            className="w-full" 
+            disabled={cart.length === 0 || isProcessing}
+            onClick={() => handleCheckout("card")}
+          >
+            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CreditCard className="w-4 h-4 mr-2" />} 
+            Card / M-Pesa
           </Button>
         </div>
       </div>
     </div>
+    <ReceiptModal 
+      open={isReceiptOpen} 
+      onOpenChange={setIsReceiptOpen} 
+      order={completedOrder} 
+    />
+    </>
   );
 }
