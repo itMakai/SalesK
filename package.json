@@ -1,0 +1,33 @@
+{
+  "name": "salesk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SalesK — Fully customizable, multi-tenant POS system",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "npm run generate --workspace=@salesk/db",
+    "db:migrate": "npm run migrate --workspace=@salesk/db",
+    "db:push": "npm run push --workspace=@salesk/db",
+    "db:seed": "npm run seed --workspace=@salesk/db",
+    "db:studio": "npm run studio --workspace=@salesk/db",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@11.13.0"
+}
