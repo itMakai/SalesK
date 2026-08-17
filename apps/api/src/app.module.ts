@@ -11,6 +11,8 @@ import { BranchModule } from './modules/branch/branch.module';
 import { CategoryModule } from './modules/category/category.module';
 import { ProductModule } from './modules/product/product.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { OrderModule } from './modules/order/order.module';
+import { ReceiptModule } from './modules/receipt/receipt.module';
 
 @Module({
   imports: [
@@ -18,7 +20,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
     AuthModule, 
     TenantModule, 
     UserModule, 
-    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule
+    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule, OrderModule, ReceiptModule
   ],
   controllers: [AppController],
   providers: [AppService],
