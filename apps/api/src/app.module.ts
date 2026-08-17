@@ -8,6 +8,8 @@ import { UserModule } from './modules/user/user.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { TenantMiddleware } from './common/middlewares/tenant.middleware';
 import { BranchModule } from './modules/branch/branch.module';
+import { CategoryModule } from './modules/category/category.module';
+import { ProductModule } from './modules/product/product.module';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { BranchModule } from './modules/branch/branch.module';
     AuthModule, 
     TenantModule, 
     UserModule, 
-    PrismaModule, BranchModule
+    PrismaModule, BranchModule, CategoryModule, ProductModule
   ],
   controllers: [AppController],
   providers: [AppService],
