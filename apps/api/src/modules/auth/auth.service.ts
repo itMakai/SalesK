@@ -274,7 +274,7 @@ export class AuthService {
     if (isValid) {
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { isTwoFactorEnabled: true },
+        data: { twoFactorEnabled: true },
       });
       return { success: true };
     }

@@ -7,6 +7,7 @@ import { TenantModule } from './modules/tenant/tenant.module';
 import { UserModule } from './modules/user/user.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { TenantMiddleware } from './common/middlewares/tenant.middleware';
+import { BranchModule } from './modules/branch/branch.module';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { TenantMiddleware } from './common/middlewares/tenant.middleware';
     AuthModule, 
     TenantModule, 
     UserModule, 
-    PrismaModule
+    PrismaModule, BranchModule
   ],
   controllers: [AppController],
   providers: [AppService],
