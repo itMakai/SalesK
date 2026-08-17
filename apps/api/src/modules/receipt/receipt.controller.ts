@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Body, UseGuards } from '@nestjs/common';
 import { ReceiptService } from './receipt.service';
 import { UpdateReceiptTemplateDto } from './dto/receipt.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -33,5 +33,23 @@ export class ReceiptController {
     @Param('orderId') orderId: string,
   ) {
     return this.receiptService.generateHtmlReceipt(orderId, branchId);
+  }
+
+  @Post(':orderId/send')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  sendDigitalReceipt(
+    @Param('orderId') orderId: string,
+    @Body() body: { branchId: string; phone: string }
+  ) {
+    return this.receiptService.sendDigitalReceipt(orderId, body.branchId, body.phone);
+  }
+
+  @Get(':orderId/escpos/:branchId')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  getEscPosReceipt(
+    @Param('orderId') orderId: string,
+    @Param('branchId') branchId: string,
+  ) {
+    return this.receiptService.generateEscPosReceipt(orderId, branchId);
   }
 }

@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { usePosStore } from "@/stores/pos-store";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, CreditCard, Banknote, Loader2, Phone } from "lucide-react";
+import { Trash2, Plus, Minus, CreditCard, Banknote, Loader2, Phone, SplitSquareHorizontal } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { apiClient } from "@/lib/api-client";
 import { ReceiptModal } from "./receipt-modal";
+import { SplitPaymentModal } from "./split-payment-modal";
 import {
   Dialog,
   DialogContent,
@@ -40,30 +41,40 @@ export function CartPanel() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pollingStatus, setPollingStatus] = useState<string | null>(null);
 
+  // Paystack State
+  const [isPaystackPromptOpen, setIsPaystackPromptOpen] = useState(false);
+  const [paystackEmail, setPaystackEmail] = useState("");
+
+  // Split Payment State
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
+
+  // --- Common Order Creation ---
+  const createOrder = async (payments?: any[]) => {
+    const payload: any = {
+      branchId: "default-branch", 
+      type: "sale",
+      discountAmount: 0,
+      items: cart.map(item => ({
+        productId: item.productId,
+        productName: item.name,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        tax: item.price * item.quantity * (item.taxRate / 100),
+        discount: 0,
+      }))
+    };
+    if (payments) payload.payments = payments;
+    
+    const res = await apiClient.post("/orders", payload);
+    return res.data;
+  };
+
   const handleCashCheckout = async () => {
     if (cart.length === 0) return;
     setIsProcessing(true);
     try {
-      const payload = {
-        branchId: "default-branch", 
-        type: "sale",
-        discountAmount: 0,
-        items: cart.map(item => ({
-          productId: item.productId,
-          productName: item.name,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          tax: item.price * item.quantity * (item.taxRate / 100),
-          discount: 0,
-        })),
-        payments: [{
-          method: "cash",
-          amount: total,
-        }]
-      };
-
-      const res = await apiClient.post("/orders", payload);
-      setCompletedOrder(res.data);
+      const order = await createOrder([{ method: "cash", amount: total }]);
+      setCompletedOrder(order);
       setIsReceiptOpen(true);
       clearCart();
     } catch (error) {
@@ -79,48 +90,25 @@ export function CartPanel() {
       alert("Please enter a valid phone number");
       return;
     }
-
     setIsProcessing(true);
     setPollingStatus("Initiating STK Push...");
 
     try {
-      // 1. Create a Pending Order first
-      const orderPayload = {
-        branchId: "default-branch", 
-        type: "sale",
-        discountAmount: 0,
-        items: cart.map(item => ({
-          productId: item.productId,
-          productName: item.name,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          tax: item.price * item.quantity * (item.taxRate / 100),
-          discount: 0,
-        }))
-        // Note: No immediate payments array here, we rely on M-Pesa
-      };
-      
-      const orderRes = await apiClient.post("/orders", orderPayload);
-      const orderId = orderRes.data.id;
-      setCompletedOrder(orderRes.data); // Save reference
+      const order = await createOrder();
+      setCompletedOrder(order); // Save reference
 
-      // 2. Trigger M-Pesa STK Push
-      const pushPayload = {
+      await apiClient.post("/payments/mpesa/stk-push", { // Adjust route if needed, was /mpesa/stk-push
         branchId: "default-branch",
-        orderId: orderId,
+        orderId: order.id,
         phone: phoneNumber,
         amount: total,
-      };
-
-      await apiClient.post("/mpesa/stk-push", pushPayload);
+      });
       
       setPollingStatus("Waiting for Customer to input PIN...");
 
-      // For MVP: Polling every 5 seconds to check if order status is 'completed'
-      // In production, use WebSockets or Server-Sent Events
       const pollInterval = setInterval(async () => {
         try {
-          const checkRes = await apiClient.get(`/orders/${orderId}`);
+          const checkRes = await apiClient.get(`/orders/${order.id}`);
           if (checkRes.data.status === 'completed') {
             clearInterval(pollInterval);
             setPollingStatus(null);
@@ -135,7 +123,6 @@ export function CartPanel() {
         }
       }, 5000);
 
-      // Stop polling after 60 seconds (M-Pesa timeout)
       setTimeout(() => {
         clearInterval(pollInterval);
         if (isProcessing) {
@@ -152,9 +139,131 @@ export function CartPanel() {
     }
   };
 
+  const handlePaystackInitiate = async () => {
+    if (!paystackEmail || !paystackEmail.includes('@')) {
+      alert("Please enter a valid email");
+      return;
+    }
+    setIsProcessing(true);
+
+    try {
+      const order = await createOrder();
+      const res = await apiClient.post("/payments/paystack/charge", {
+        branchId: "default-branch",
+        orderId: order.id,
+        email: paystackEmail,
+        amount: total,
+      });
+
+      // Redirect to PayStack checkout URL
+      if (res.data.authorizationUrl) {
+        window.open(res.data.authorizationUrl, '_blank');
+        
+        setPollingStatus("Waiting for Card Payment...");
+        const pollInterval = setInterval(async () => {
+          try {
+            const checkRes = await apiClient.get(`/orders/${order.id}`);
+            if (checkRes.data.status === 'completed') {
+              clearInterval(pollInterval);
+              setPollingStatus(null);
+              setIsPaystackPromptOpen(false);
+              setCompletedOrder(checkRes.data);
+              setIsReceiptOpen(true);
+              clearCart();
+              setIsProcessing(false);
+            }
+          } catch (e) { }
+        }, 5000);
+
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          if (isProcessing) {
+            setPollingStatus("Payment timed out or cancelled.");
+            setIsProcessing(false);
+          }
+        }, 300000); // 5 mins
+      }
+    } catch (error: any) {
+      console.error("Paystack Failed:", error);
+      alert(error?.response?.data?.message || "Failed to initiate Paystack");
+      setIsProcessing(false);
+    }
+  };
+
+  const handleProcessSplit = async (payments: any[]) => {
+    setIsProcessing(true);
+    try {
+      const order = await createOrder();
+      setCompletedOrder(order);
+
+      // Process each payment method
+      for (const p of payments) {
+        if (p.method === 'cash') {
+          await apiClient.post("/payments/cash", {
+            orderId: order.id,
+            branchId: "default-branch",
+            amount: p.amount,
+          });
+        } else if (p.method === 'mpesa') {
+          await apiClient.post("/payments/mpesa/stk-push", {
+            branchId: "default-branch",
+            orderId: order.id,
+            phone: p.phone,
+            amount: p.amount,
+          });
+          // Note: In a real flow with Split, you'd have to manage multiple async gateways gracefully.
+        } else if (p.method === 'card') {
+          const res = await apiClient.post("/payments/paystack/charge", {
+            branchId: "default-branch",
+            orderId: order.id,
+            email: p.email,
+            amount: p.amount,
+          });
+          if (res.data.authorizationUrl) {
+            window.open(res.data.authorizationUrl, '_blank');
+          }
+        }
+      }
+
+      // Start polling for order completion if M-Pesa or Card was used
+      const hasAsync = payments.some(p => p.method !== 'cash');
+      if (hasAsync) {
+        // Simple polling for MVP
+        const pollInterval = setInterval(async () => {
+          try {
+            const checkRes = await apiClient.get(`/orders/${order.id}`);
+            if (checkRes.data.status === 'completed') {
+              clearInterval(pollInterval);
+              setIsSplitModalOpen(false);
+              setCompletedOrder(checkRes.data);
+              setIsReceiptOpen(true);
+              clearCart();
+              setIsProcessing(false);
+            }
+          } catch (e) { }
+        }, 5000);
+
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setIsProcessing(false);
+        }, 60000);
+      } else {
+        // Only cash was used
+        setIsSplitModalOpen(false);
+        setIsReceiptOpen(true);
+        clearCart();
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error("Split payment failed:", error);
+      alert("Failed to process split payment.");
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <>
-      <div className="w-96 flex flex-col border-l bg-card h-full">
+      <div className="w-[400px] flex flex-col border-l bg-card h-full">
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between shrink-0">
           <h2 className="font-bold text-lg">Current Order</h2>
@@ -186,23 +295,11 @@ export function CartPanel() {
                       Ksh {(item.price * item.quantity).toLocaleString()}
                     </span>
                     <div className="flex items-center border rounded-md h-8">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-full w-8 px-0"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-full w-8 px-0" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
                         <Minus className="w-3 h-3" />
                       </Button>
-                      <span className="w-8 text-center text-sm font-medium">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-full w-8 px-0"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      >
+                      <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                      <Button variant="ghost" size="icon" className="h-full w-8 px-0" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
                         <Plus className="w-3 h-3" />
                       </Button>
                     </div>
@@ -232,25 +329,24 @@ export function CartPanel() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="w-full" 
-              disabled={cart.length === 0 || isProcessing}
-              onClick={handleCashCheckout}
-            >
-              {isProcessing && !isMpesaPromptOpen ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Banknote className="w-4 h-4 mr-2" />} 
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <Button size="lg" variant="outline" className="w-full" disabled={cart.length === 0 || isProcessing} onClick={handleCashCheckout}>
+              {isProcessing && !isMpesaPromptOpen && !isPaystackPromptOpen && !isSplitModalOpen ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Banknote className="w-4 h-4 mr-2" />} 
               Cash
             </Button>
-            <Button 
-              size="lg" 
-              className="w-full bg-[#4CAF50] hover:bg-[#45a049] text-white" 
-              disabled={cart.length === 0 || isProcessing}
-              onClick={() => setIsMpesaPromptOpen(true)}
-            >
+            <Button size="lg" className="w-full bg-[#4CAF50] hover:bg-[#45a049] text-white" disabled={cart.length === 0 || isProcessing} onClick={() => setIsMpesaPromptOpen(true)}>
               <Phone className="w-4 h-4 mr-2" /> 
               M-Pesa
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="lg" className="w-full bg-[#0BA4DB] hover:bg-[#098bba] text-white" disabled={cart.length === 0 || isProcessing} onClick={() => setIsPaystackPromptOpen(true)}>
+              <CreditCard className="w-4 h-4 mr-2" /> 
+              Card
+            </Button>
+            <Button size="lg" variant="secondary" className="w-full border-primary text-primary hover:bg-primary/10" disabled={cart.length === 0 || isProcessing} onClick={() => setIsSplitModalOpen(true)}>
+              <SplitSquareHorizontal className="w-4 h-4 mr-2" /> 
+              Split
             </Button>
           </div>
         </div>
@@ -268,16 +364,8 @@ export function CartPanel() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="07XX XXX XXX"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                disabled={isProcessing}
-              />
+              <Input id="phone" type="tel" placeholder="07XX XXX XXX" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} disabled={isProcessing} />
             </div>
-            
             {pollingStatus && (
               <div className="p-4 bg-muted text-center rounded-md flex flex-col items-center">
                 <Loader2 className="w-6 h-6 animate-spin mb-2 text-primary" />
@@ -287,23 +375,48 @@ export function CartPanel() {
             )}
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsMpesaPromptOpen(false)}
-              disabled={isProcessing}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleMpesaInitiate}
-              disabled={isProcessing || !phoneNumber}
-              className="bg-[#4CAF50] hover:bg-[#45a049] text-white"
-            >
-              Send Prompt
-            </Button>
+            <Button variant="outline" onClick={() => setIsMpesaPromptOpen(false)} disabled={isProcessing}>Cancel</Button>
+            <Button onClick={handleMpesaInitiate} disabled={isProcessing || !phoneNumber} className="bg-[#4CAF50] hover:bg-[#45a049] text-white">Send Prompt</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PayStack Prompt Dialog */}
+      <Dialog open={isPaystackPromptOpen} onOpenChange={(open) => !isProcessing && setIsPaystackPromptOpen(open)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Pay by Card</DialogTitle>
+            <DialogDescription>
+              Enter customer email to initiate PayStack checkout.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Customer Email</Label>
+              <Input id="email" type="email" placeholder="customer@example.com" value={paystackEmail} onChange={(e) => setPaystackEmail(e.target.value)} disabled={isProcessing} />
+            </div>
+            {pollingStatus && (
+              <div className="p-4 bg-muted text-center rounded-md flex flex-col items-center">
+                <Loader2 className="w-6 h-6 animate-spin mb-2 text-primary" />
+                <p className="text-sm font-medium">{pollingStatus}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaystackPromptOpen(false)} disabled={isProcessing}>Cancel</Button>
+            <Button onClick={handlePaystackInitiate} disabled={isProcessing || !paystackEmail} className="bg-[#0BA4DB] hover:bg-[#098bba] text-white">Charge Card</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Split Payment Modal */}
+      <SplitPaymentModal
+        open={isSplitModalOpen}
+        onOpenChange={setIsSplitModalOpen}
+        totalAmount={total}
+        onProcessSplit={handleProcessSplit}
+        isProcessing={isProcessing}
+      />
 
       <ReceiptModal 
         open={isReceiptOpen} 

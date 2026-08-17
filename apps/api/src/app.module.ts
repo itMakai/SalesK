@@ -15,13 +15,15 @@ import { OrderModule } from './modules/order/order.module';
 import { ReceiptModule } from './modules/receipt/receipt.module';
 import { PaymentModule } from './modules/payment/payment.module';
 
+import { NotificationModule } from './modules/notification/notification.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule, 
     TenantModule, 
     UserModule, 
-    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule, OrderModule, ReceiptModule, PaymentModule
+    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule, OrderModule, ReceiptModule, PaymentModule, NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService],
