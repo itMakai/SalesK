@@ -3,8 +3,7 @@
 // Re-exports the Prisma Client for use across apps
 // ─────────────────────────────────────────────
 
-export { PrismaClient } from '@prisma/client';
-export type { Prisma } from '@prisma/client';
+export { PrismaClient, Prisma } from '@prisma/client';
 
 // Singleton Prisma Client instance
 import { PrismaClient } from '@prisma/client';

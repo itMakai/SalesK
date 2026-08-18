@@ -27,37 +27,44 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       query: {
         $allModels: {
           async $allOperations({ model, operation, args, query }) {
-            const tenantId = tenantContext.getStore();
-            
-            // Models that DO NOT have a tenantId field
-            const globallySharedModels = ['Tenant', 'Subscription', 'Invoice'];
-            
-            if (tenantId && !globallySharedModels.includes(model)) {
-              const typedArgs: any = args;
-
-              // Automatically inject tenantId into where clause
-              if (['findUnique', 'findFirst', 'findMany', 'count', 'update', 'updateMany', 'delete', 'deleteMany'].includes(operation)) {
-                typedArgs.where = { ...typedArgs.where, tenantId };
-              }
+            try {
+              const tenantId = tenantContext.getStore();
               
-              // Automatically inject tenantId into create clause
-              if (['create', 'createMany'].includes(operation)) {
-                if (Array.isArray(typedArgs.data)) {
-                  typedArgs.data = typedArgs.data.map((d: any) => ({ ...d, tenantId }));
-                } else {
-                  typedArgs.data = { ...typedArgs.data, tenantId };
+              // Dynamically check if the model has a tenantId field
+              const modelInfo = Prisma.dmmf.datamodel.models.find(m => m.name === model);
+              const hasTenantId = modelInfo?.fields.some(f => f.name === 'tenantId');
+              
+              if (tenantId && hasTenantId) {
+                const typedArgs: any = args || {};
+
+                // Automatically inject tenantId into where clause
+                if (['findUnique', 'findFirst', 'findMany', 'count', 'update', 'updateMany', 'delete', 'deleteMany'].includes(operation)) {
+                  typedArgs.where = { ...typedArgs.where, tenantId };
                 }
+                
+                // Automatically inject tenantId into create clause
+                if (['create', 'createMany'].includes(operation)) {
+                  if (Array.isArray(typedArgs.data)) {
+                    typedArgs.data = typedArgs.data.map((d: any) => ({ ...d, tenantId }));
+                  } else {
+                    typedArgs.data = { ...typedArgs.data, tenantId };
+                  }
+                }
+                
+                // Upsert needs both
+                if (operation === 'upsert') {
+                  typedArgs.where = { ...typedArgs.where, tenantId };
+                  typedArgs.create = { ...typedArgs.create, tenantId };
+                  typedArgs.update = { ...typedArgs.update, tenantId };
+                }
+                return query(typedArgs);
               }
-              
-              // Upsert needs both
-              if (operation === 'upsert') {
-                typedArgs.where = { ...typedArgs.where, tenantId };
-                typedArgs.create = { ...typedArgs.create, tenantId };
-                typedArgs.update = { ...typedArgs.update, tenantId };
-              }
-            }
 
-            return query(args);
+              return query(args);
+            } catch (error) {
+              console.error(`Prisma Extension Error on ${model}.${operation}:`, error);
+              return query(args); // Fallback to un-intercepted query on error
+            }
           },
         },
       },

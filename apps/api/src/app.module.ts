@@ -14,6 +14,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
 import { ReceiptModule } from './modules/receipt/receipt.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 import { NotificationModule } from './modules/notification/notification.module';
 
@@ -23,7 +24,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     AuthModule, 
     TenantModule, 
     UserModule, 
-    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule, OrderModule, ReceiptModule, PaymentModule, NotificationModule
+    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule, OrderModule, ReceiptModule, PaymentModule, DashboardModule, NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService],
