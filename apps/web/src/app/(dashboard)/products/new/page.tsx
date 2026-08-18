@@ -21,7 +21,7 @@ const productSchema = z.object({
   description: z.string().optional(),
   basePrice: z.coerce.number().min(0, "Price must be positive"),
   costPrice: z.coerce.number().optional(),
-  categoryId: z.string().optional(),
+  categoryId: z.string().uuid("Please enter a valid Category UUID, or use the + button").optional().or(z.literal("")),
   trackInventory: z.boolean().default(true),
 });
 
@@ -61,10 +61,18 @@ export default function NewProductPage() {
         imageUrl = uploadRes.data.url;
       }
 
+      // Clean up empty strings for optional fields
+      const cleanData: any = { ...data };
+      if (!cleanData.sku) delete cleanData.sku;
+      if (!cleanData.barcode) delete cleanData.barcode;
+      if (!cleanData.description) delete cleanData.description;
+      if (!cleanData.categoryId) delete cleanData.categoryId;
+      if (!cleanData.costPrice && cleanData.costPrice !== 0) delete cleanData.costPrice;
+
       // 2. Create Product
       await apiClient.post("/products", {
-        ...data,
-        imageUrl,
+        ...cleanData,
+        image: imageUrl || undefined,
         isActive: true,
       });
 
@@ -201,7 +209,13 @@ export default function NewProductPage() {
         </div>
       </form>
 
-      <CategoryModal open={isCategoryModalOpen} onOpenChange={setCategoryModalOpen} />
+      <CategoryModal 
+        open={isCategoryModalOpen} 
+        onOpenChange={setCategoryModalOpen} 
+        onCategoryCreated={(category) => {
+          setValue("categoryId", category.id, { shouldValidate: true });
+        }}
+      />
     </div>
   );
 }

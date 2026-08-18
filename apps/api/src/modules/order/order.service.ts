@@ -94,6 +94,32 @@ export class OrderService {
     });
   }
 
+  async getDashboardStats(tenantId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const orders = await this.prisma.extended.order.findMany({
+      where: {
+        tenantId,
+        status: OrderStatus.COMPLETED,
+        createdAt: { gte: today },
+      },
+    });
+
+    const totalRevenueToday = orders.reduce((sum, order) => sum + Number(order.total), 0);
+    const salesCountToday = orders.length;
+
+    const activeBranches = await this.prisma.extended.branch.count({
+      where: { tenantId },
+    });
+
+    return {
+      totalRevenueToday,
+      salesCountToday,
+      activeBranches,
+    };
+  }
+
   async findAll(branchId?: string, status?: string) {
     const where: any = {};
     if (branchId) where.branchId = branchId;

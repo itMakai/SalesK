@@ -60,4 +60,13 @@ export class TenantService {
       select: { dashboardConfig: true },
     });
   }
+
+  async applyTemplate(tenantId: string, template: string) {
+    // In a real app, this would seed categories, settings, UI themes
+    // based on the business type (retail, restaurant, etc)
+    return this.prisma.extended.tenant.update({
+      where: { id: tenantId },
+      data: { businessType: template },
+    });
+  }
 }

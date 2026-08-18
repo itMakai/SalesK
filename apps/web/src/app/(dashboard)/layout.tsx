@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import Link from "next/link"
 import { Users, Settings, LayoutDashboard, Store, ShoppingCart, Menu, Package } from "lucide-react"
 
 import { useAuthStore } from "@/stores/auth-store"
@@ -21,14 +22,20 @@ export default function DashboardLayout({
   const logout = useAuthStore((state) => state.logout)
   const [isSidebarOpen, setSidebarOpen] = useState(true)
 
+  const [isHydrated, setIsHydrated] = useState(false)
+
   useEffect(() => {
-    // If no token, bounce to login
-    if (!token) {
+    setIsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    // Only check auth after Zustand has hydrated from localStorage
+    if (isHydrated && !token) {
       router.push("/login")
     }
-  }, [token, router])
+  }, [token, router, isHydrated])
 
-  if (!user) return null
+  if (!isHydrated || !user) return null
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -45,7 +52,7 @@ export default function DashboardLayout({
       <aside className={`bg-card border-r transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"} hidden md:flex flex-col`}>
         <div className="h-16 flex items-center justify-center border-b">
           <h1 className={`font-bold text-primary transition-all ${isSidebarOpen ? "text-xl" : "text-sm"}`}>
-            {isSidebarOpen ? "Biashara POS" : "BPOS"}
+            {isSidebarOpen ? "SalesK" : "SK"}
           </h1>
         </div>
         <nav className="flex-1 overflow-y-auto py-4">
@@ -54,7 +61,7 @@ export default function DashboardLayout({
               const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
               return (
                 <li key={item.name}>
-                  <a
+                  <Link
                     href={item.href}
                     className={`flex items-center space-x-3 px-3 py-2 rounded-md transition-colors ${
                       isActive 
@@ -64,7 +71,7 @@ export default function DashboardLayout({
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {isSidebarOpen && <span>{item.name}</span>}
-                  </a>
+                  </Link>
                 </li>
               )
             })}

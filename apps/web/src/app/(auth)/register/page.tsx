@@ -42,20 +42,20 @@ export default function RegisterPage() {
     try {
       setIsLoading(true)
       setError("")
-      // Call the register endpoint
-      await apiClient.post("/auth/register", data)
-      
-      // Auto-login after registration
-      const loginResponse = await apiClient.post("/auth/login", {
-        email: data.email,
-        password: data.password,
-      })
-      const { accessToken, user, tenantId } = loginResponse.data
-      
-      setAuth(accessToken, tenantId, user)
+      // Register and get tokens in one call
+      const response = await apiClient.post("/auth/register", data)
+      const { user, tenant, tokens } = response.data
+
+      // The register endpoint returns { user, tenant, branch, tokens: { accessToken, refreshToken } }
+      setAuth(tokens.accessToken, tenant.id, user)
       router.push("/onboarding/business-type")
     } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed")
+      const messages = err.response?.data?.message
+      if (Array.isArray(messages)) {
+        setError(messages.join(", "))
+      } else {
+        setError(messages || "Registration failed. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -70,7 +70,7 @@ export default function RegisterPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Create an account</CardTitle>
           <CardDescription className="text-center">
-            Enter your details to register for Biashara POS
+            Enter your details to register for SalesK
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>

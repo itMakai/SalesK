@@ -18,8 +18,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useEffect } from "react";
 
 export function CartPanel() {
+  const [branchId, setBranchId] = useState<string>("default-branch");
+
+  useEffect(() => {
+    // Fetch user's branches and select the first one as active to avoid 400 errors
+    apiClient.get("/branches").then(res => {
+      if (res.data && res.data.length > 0) {
+        setBranchId(res.data[0].id);
+      }
+    }).catch(console.error);
+  }, []);
   const cart = usePosStore((state) => state.cart);
   const updateQuantity = usePosStore((state) => state.updateQuantity);
   const removeFromCart = usePosStore((state) => state.removeFromCart);
@@ -51,15 +62,15 @@ export function CartPanel() {
   // --- Common Order Creation ---
   const createOrder = async (payments?: any[]) => {
     const payload: any = {
-      branchId: "default-branch", 
+      branchId: branchId, 
       type: "sale",
       discountAmount: 0,
       items: cart.map(item => ({
         productId: item.productId,
         productName: item.name,
         quantity: item.quantity,
-        unitPrice: item.price,
-        tax: item.price * item.quantity * (item.taxRate / 100),
+        unitPrice: Number(item.price),
+        tax: Number(item.price) * item.quantity * (item.taxRate / 100),
         discount: 0,
       }))
     };
@@ -98,7 +109,7 @@ export function CartPanel() {
       setCompletedOrder(order); // Save reference
 
       await apiClient.post("/payments/mpesa/stk-push", { // Adjust route if needed, was /mpesa/stk-push
-        branchId: "default-branch",
+        branchId: branchId,
         orderId: order.id,
         phone: phoneNumber,
         amount: total,
@@ -149,7 +160,7 @@ export function CartPanel() {
     try {
       const order = await createOrder();
       const res = await apiClient.post("/payments/paystack/charge", {
-        branchId: "default-branch",
+        branchId: branchId,
         orderId: order.id,
         email: paystackEmail,
         amount: total,
@@ -201,12 +212,12 @@ export function CartPanel() {
         if (p.method === 'cash') {
           await apiClient.post("/payments/cash", {
             orderId: order.id,
-            branchId: "default-branch",
+            branchId: branchId,
             amount: p.amount,
           });
         } else if (p.method === 'mpesa') {
           await apiClient.post("/payments/mpesa/stk-push", {
-            branchId: "default-branch",
+            branchId: branchId,
             orderId: order.id,
             phone: p.phone,
             amount: p.amount,

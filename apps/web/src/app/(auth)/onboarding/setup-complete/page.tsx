@@ -17,7 +17,7 @@ export default function SetupCompletePage() {
         </div>
         <CardTitle>You&apos;re all set!</CardTitle>
         <CardDescription>
-          Your Biashara account is fully configured and ready to go.
+          Your SalesK account is fully configured and ready to go.
         </CardDescription>
       </CardHeader>
       <CardContent>

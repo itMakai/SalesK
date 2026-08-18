@@ -70,7 +70,11 @@ export function ProductGrid({ products }: ProductGridProps) {
         >
           <div className="aspect-square bg-muted flex items-center justify-center w-full shrink-0">
             {product.image ? (
-              <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
+              <img 
+                src={product.image.startsWith('http') ? product.image : `http://localhost:4000${product.image}`} 
+                alt={product.name} 
+                className="object-cover w-full h-full" 
+              />
             ) : (
               <Package className="w-8 h-8 text-muted-foreground/50" />
             )}

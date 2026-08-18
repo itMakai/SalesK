@@ -7,6 +7,10 @@ export class UpdateTenantDto {
 
   @IsString()
   @IsOptional()
+  businessType?: string;
+
+  @IsString()
+  @IsOptional()
   logo?: string;
 
   @IsString()

@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -55,5 +55,14 @@ export class TenantController {
     @Body() themeConfig: Record<string, any>,
   ) {
     return this.tenantService.updateThemeConfig(tenantId, themeConfig);
+  }
+
+  @Post('apply-template')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  applyTemplate(
+    @CurrentTenantId() tenantId: string,
+    @Body('template') template: string,
+  ) {
+    return this.tenantService.applyTemplate(tenantId, template);
   }
 }

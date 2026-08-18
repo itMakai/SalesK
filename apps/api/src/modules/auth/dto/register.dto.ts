@@ -1,5 +1,4 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { BusinessType } from '@salesk/shared';
 
 export class RegisterDto {
   @IsString()
@@ -15,24 +14,25 @@ export class RegisterDto {
   email!: string;
 
   @IsString()
-  @IsNotEmpty()
-  phone!: string;
+  @IsOptional()
+  phone?: string;
 
   @IsString()
   @MinLength(6)
   password!: string;
 
+  // Business details — optional at registration, captured during onboarding
   @IsString()
-  @IsNotEmpty()
-  businessName!: string;
+  @IsOptional()
+  businessName?: string;
 
   @IsString()
-  @IsNotEmpty()
-  businessType!: BusinessType | string;
+  @IsOptional()
+  businessType?: string;
 
   @IsString()
-  @IsNotEmpty()
-  branchName!: string;
+  @IsOptional()
+  branchName?: string;
 
   @IsString()
   @IsOptional()

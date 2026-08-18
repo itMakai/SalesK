@@ -7,6 +7,19 @@ export class BranchService {
   constructor(private prisma: PrismaService) {}
 
   async create(createBranchDto: CreateBranchDto) {
+    // We use the raw prisma client to check if the branch code exists
+    // (tenantId is injected automatically by extended client, but we can rely on findFirst)
+    const existing = await this.prisma.extended.branch.findFirst({
+      where: { code: createBranchDto.code },
+    });
+
+    if (existing) {
+      return this.prisma.extended.branch.update({
+        where: { id: existing.id },
+        data: createBranchDto as any,
+      });
+    }
+
     return this.prisma.extended.branch.create({
       data: createBranchDto as any,
     });

@@ -41,18 +41,20 @@ export default function LoginPage() {
       setIsLoading(true)
       setError("")
       const response = await apiClient.post("/auth/login", data)
-      const { accessToken, user, tenantId } = response.data
-      
-      setAuth(accessToken, tenantId, user)
-      
-      // If the user hasn't set up their business yet, push to onboarding
-      if (!tenantId) {
-        router.push("/onboarding/business-type")
-      } else {
-        router.push("/") // Dashboard
-      }
+      // API returns: { user, tokens: { accessToken, refreshToken } }
+      const { user, tokens } = response.data
+
+      setAuth(tokens.accessToken, user.tenantId, user)
+
+      // Redirect to dashboard
+      router.push("/")
     } catch (err: any) {
-      setError(err.response?.data?.message || "Invalid credentials")
+      const messages = err.response?.data?.message
+      if (Array.isArray(messages)) {
+        setError(messages.join(", "))
+      } else {
+        setError(messages || "Invalid email or password")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -65,7 +67,7 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Sign in to Biashara</CardTitle>
+          <CardTitle className="text-2xl text-center">Sign in to SalesK</CardTitle>
           <CardDescription className="text-center">
             Enter your email and password to login
           </CardDescription>

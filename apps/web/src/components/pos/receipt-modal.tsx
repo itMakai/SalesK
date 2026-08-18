@@ -72,7 +72,7 @@ export function ReceiptModal({ open, onOpenChange, order }: ReceiptModalProps) {
         </head>
         <body>
           <div class="header">
-            <h2 style="margin:0; font-size:16px;">Biashara POS</h2>
+            <h2 style="margin:0; font-size:16px;">SalesK</h2>
             <div style="margin-top:5px;">Branch: ${order.branchId || 'Main'}</div>
             <div>Order: ${order.orderNumber}</div>
             <div>Date: ${new Date(order.createdAt).toLocaleString()}</div>

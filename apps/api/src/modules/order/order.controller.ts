@@ -29,6 +29,12 @@ export class OrderController {
     return this.orderService.findAll(branchId, status);
   }
 
+  @Get('stats/dashboard')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  getDashboardStats(@Request() req: any) {
+    return this.orderService.getDashboardStats(req.user.tenantId);
+  }
+
   @Get(':id')
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   findOne(@Param('id') id: string) {

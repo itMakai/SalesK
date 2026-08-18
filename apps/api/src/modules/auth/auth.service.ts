@@ -26,14 +26,11 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
-    const tenantSlug = slugify(dto.businessName);
-    const existingTenant = await this.prisma.tenant.findUnique({
-      where: { slug: tenantSlug },
-    });
-
-    if (existingTenant) {
-      throw new ConflictException('Business name already in use');
-    }
+    // Use provided business name or a temporary one derived from email
+    const businessName = dto.businessName || `${dto.firstName}'s Business`;
+    const baseSlug = slugify(businessName);
+    // Ensure slug uniqueness by appending a random suffix if needed
+    const tenantSlug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`;
 
     // 2. Hash password
     const salt = await bcrypt.genSalt();
@@ -44,22 +41,21 @@ export class AuthService {
       // Create Tenant
       const tenant = await prisma.tenant.create({
         data: {
-          name: dto.businessName,
+          name: businessName,
           slug: tenantSlug,
-          businessType: dto.businessType,
+          businessType: dto.businessType || 'general',
           email: dto.email,
-          phone: dto.phone,
-          enabledModules: ['core_pos'], // Will be enriched by template later
+          phone: dto.phone || '',
+          enabledModules: ['core_pos'],
         },
       });
 
       // Create initial Branch (Headquarters)
-      const branchCode = 'HQ'; // Simplify for now
       const branch = await prisma.branch.create({
         data: {
           tenantId: tenant.id,
-          name: dto.branchName,
-          code: branchCode,
+          name: dto.branchName || 'Main Branch',
+          code: 'HQ',
           address: dto.branchAddress,
           city: dto.branchCity,
           isHeadquarters: true,
@@ -71,7 +67,7 @@ export class AuthService {
         data: {
           tenantId: tenant.id,
           email: dto.email,
-          phone: dto.phone,
+          phone: dto.phone || '',
           firstName: dto.firstName,
           lastName: dto.lastName,
           passwordHash,

@@ -11,9 +11,9 @@ async function main() {
     update: {},
     create: {
       id: 'default-tenant',
-      name: 'Default Biashara',
+      name: 'Default SalesK',
       businessType: 'retail',
-      slug: 'default-biashara',
+      slug: 'default-salesk',
       email: 'admin@salesk.com',
       phone: '0700000000',
     },

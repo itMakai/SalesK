@@ -52,3 +52,5 @@ packages/db/prisma/*.db-journal
 
 # Electron
 apps/desktop/release/
+
+apps/api/uploads/

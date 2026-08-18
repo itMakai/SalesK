@@ -33,7 +33,7 @@ export class SmsChannel {
       payload.append('to', formattedPhone);
       payload.append('message', message);
       // Optional: sender ID
-      // payload.append('from', 'BIASHARA');
+      // payload.append('from', 'SALESK');
 
       const response = await fetch(this.BASE_URL, {
         method: 'POST',
