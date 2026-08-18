@@ -4,60 +4,74 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 @Injectable()
 export class MpesaService {
   private readonly logger = new Logger(MpesaService.name);
-  
-  // Safaricom Sandbox URLs. In production, these should be configurable.
-  private readonly BASE_URL = 'https://sandbox.safaricom.co.ke';
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Retrieves the Daraja Access Token using Branch credentials
-   */
-  private async getAccessToken(branchId: string): Promise<string> {
-    const config = await this.prisma.extended.paymentConfig.findUnique({
-      where: { branchId },
+  private getSandboxUrl() {
+    return 'https://sandbox.safaricom.co.ke';
+  }
+
+  /** Retrieve credentials from PaymentConfig.credentials JSON */
+  private async getConfig(branchId: string): Promise<{
+    consumerKey: string; consumerSecret: string;
+    shortcode: string; passkey: string;
+    environment: string; baseUrl: string;
+  }> {
+    const config = await this.prisma.extended.paymentConfig.findFirst({
+      where: { branchId, provider: 'mpesa' },
     });
 
-    if (!config || !config.consumerKey || !config.consumerSecret) {
+    if (!config) {
       throw new NotFoundException(`M-Pesa configuration not found for branch ${branchId}`);
+    }
+
+    const creds = config.credentials as Record<string, string>;
+    const env = creds.environment || 'sandbox';
+    const baseUrl = env === 'production'
+      ? 'https://api.safaricom.co.ke'
+      : 'https://sandbox.safaricom.co.ke';
+
+    return {
+      consumerKey: creds.consumerKey || '',
+      consumerSecret: creds.consumerSecret || '',
+      shortcode: creds.shortcode || '',
+      passkey: creds.passkey || '',
+      environment: env,
+      baseUrl,
+    };
+  }
+
+  private async getAccessToken(branchId: string) {
+    const config = await this.getConfig(branchId);
+
+    if (!config.consumerKey || !config.consumerSecret) {
+      throw new NotFoundException(`M-Pesa Consumer Key/Secret not configured for branch ${branchId}`);
     }
 
     const auth = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64');
 
     try {
-      const response = await fetch(`${this.BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
-        headers: {
-          Authorization: `Basic ${auth}`,
-        },
+      const response = await fetch(`${config.baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
+        headers: { Authorization: `Basic ${auth}` },
       });
 
-      if (!response.ok) {
-        throw new Error(`Daraja Auth Failed: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Daraja Auth Failed: ${response.statusText}`);
 
       const data = await response.json();
-      return data.access_token;
+      return { token: data.access_token as string, config };
     } catch (error: any) {
       this.logger.error('Failed to get M-Pesa Access Token', error);
       throw new InternalServerErrorException('M-Pesa Authentication Failed');
     }
   }
 
-  /**
-   * Initiates the STK Push (Lipa Na M-Pesa Online)
-   */
   async initiateSTKPush(branchId: string, orderId: string, phone: string, amount: number) {
-    const config = await this.prisma.extended.paymentConfig.findUnique({
-      where: { branchId },
-    });
+    const { token, config } = await this.getAccessToken(branchId);
 
-    if (!config || !config.shortcode || !config.passkey) {
+    if (!config.shortcode || !config.passkey) {
       throw new NotFoundException(`M-Pesa shortcode/passkey not configured for branch ${branchId}`);
     }
 
-    const token = await this.getAccessToken(branchId);
-    
-    // Format Phone number (Daraja expects 2547XXXXXXXX)
     let formattedPhone = phone.trim();
     if (formattedPhone.startsWith('0')) {
       formattedPhone = `254${formattedPhone.slice(1)}`;
@@ -68,22 +82,24 @@ export class MpesaService {
     const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
     const password = Buffer.from(`${config.shortcode}${config.passkey}${timestamp}`).toString('base64');
 
+    const callbackUrl = process.env.MPESA_CALLBACK_URL || `${process.env.API_URL}/mpesa/callback`;
+
     const payload = {
       BusinessShortCode: config.shortcode,
       Password: password,
       Timestamp: timestamp,
-      TransactionType: 'CustomerPayBillOnline', // or CustomerBuyGoodsOnline for Till
-      Amount: Math.ceil(amount), // Daraja only accepts integers
+      TransactionType: 'CustomerPayBillOnline',
+      Amount: Math.ceil(amount),
       PartyA: formattedPhone,
       PartyB: config.shortcode,
       PhoneNumber: formattedPhone,
-      CallBackURL: `https://your-ngrok-url.ngrok.app/api/mpesa/callback`, // Must be a public URL
+      CallBackURL: callbackUrl,
       AccountReference: orderId.slice(0, 12),
       TransactionDesc: 'POS Payment',
     };
 
     try {
-      const response = await fetch(`${this.BASE_URL}/mpesa/stkpush/v1/processrequest`, {
+      const response = await fetch(`${config.baseUrl}/mpesa/stkpush/v1/processrequest`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -95,7 +111,6 @@ export class MpesaService {
       const data = await response.json();
 
       if (data.ResponseCode === '0') {
-        // Successfully initiated. Create a pending payment record.
         await this.prisma.extended.payment.create({
           data: {
             orderId,
@@ -123,16 +138,13 @@ export class MpesaService {
     }
   }
 
-  /**
-   * Handles the asynchronous callback from Safaricom
-   */
   async handleCallback(payload: any) {
     this.logger.log(`Received Daraja Callback: ${JSON.stringify(payload)}`);
-    
+
     const body = payload.Body.stkCallback;
     const checkoutRequestId = body.CheckoutRequestID;
     const resultCode = body.ResultCode;
-    
+
     if (!checkoutRequestId) return;
 
     const payment = await this.prisma.extended.payment.findFirst({
@@ -145,10 +157,8 @@ export class MpesaService {
     }
 
     if (resultCode === 0) {
-      // Success! Extract M-Pesa receipt number
-      const mpesaReceipt = body.CallbackMetadata.Item.find((i: any) => i.Name === 'MpesaReceiptNumber')?.Value;
-      
-      // Update Payment to completed
+      const mpesaReceipt = body.CallbackMetadata?.Item?.find((i: any) => i.Name === 'MpesaReceiptNumber')?.Value;
+
       await this.prisma.$transaction(async (tx) => {
         await (tx as any).payment.update({
           where: { id: payment.id },
@@ -160,7 +170,6 @@ export class MpesaService {
           },
         });
 
-        // Check if order is fully paid now
         const order = await (tx as any).order.findUnique({
           where: { id: payment.orderId },
           include: { payments: true },
@@ -173,21 +182,14 @@ export class MpesaService {
         if (totalPaid >= Number(order.total)) {
           await (tx as any).order.update({
             where: { id: order.id },
-            data: {
-              status: 'completed',
-              completedAt: new Date(),
-            },
+            data: { status: 'completed', completedAt: new Date() },
           });
         }
       });
     } else {
-      // Failed (e.g., cancelled by user, insufficient funds)
       await this.prisma.extended.payment.update({
         where: { id: payment.id },
-        data: {
-          status: 'failed',
-          metadata: body,
-        },
+        data: { status: 'failed', metadata: body },
       });
     }
 

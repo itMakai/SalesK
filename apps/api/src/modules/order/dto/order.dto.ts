@@ -77,11 +77,15 @@ export class CreateOrderDto {
 
   @IsString()
   @IsOptional()
+  tenantId?: string; // Injected server-side from JWT, optional from client
+
+  @IsString()
+  @IsOptional()
   terminalId?: string;
 
   @IsString()
-  @IsNotEmpty()
-  type!: string; // sale, refund
+  @IsOptional()
+  type?: string; // sale, refund — defaults to 'sale'
 
   @IsString()
   @IsOptional()

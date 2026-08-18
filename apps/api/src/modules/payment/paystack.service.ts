@@ -13,8 +13,8 @@ export class PaystackService {
    * Initiates a Paystack Charge (Initialize Transaction)
    */
   async initializeTransaction(branchId: string, orderId: string, email: string, amount: number) {
-    const config = await this.prisma.extended.paymentConfig.findUnique({
-      where: { branchId },
+    const config = await this.prisma.extended.paymentConfig.findFirst({
+      where: { branchId, provider: 'paystack' },
     });
 
     // In a real app, you might map config.provider = 'paystack' and get secret key

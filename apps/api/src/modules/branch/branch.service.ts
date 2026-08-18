@@ -51,26 +51,26 @@ export class BranchService {
   }
 
   async updatePaymentConfig(branchId: string, config: any) {
+    const provider = config.provider || 'mpesa';
+    const credentials = {
+      consumerKey: config.consumerKey,
+      consumerSecret: config.consumerSecret,
+      shortcode: config.shortcode,
+      passkey: config.passkey,
+      environment: config.environment || 'sandbox',
+    };
+
     return this.prisma.extended.paymentConfig.upsert({
-      where: { branchId },
+      where: { branchId_provider: { branchId, provider } },
       update: {
-        provider: config.provider || 'mpesa',
-        consumerKey: config.consumerKey,
-        consumerSecret: config.consumerSecret,
-        shortcode: config.shortcode,
-        passkey: config.passkey,
-        isEnabled: config.isEnabled ?? true,
-        environment: config.environment || 'sandbox',
+        isActive: config.isEnabled ?? true,
+        credentials,
       },
       create: {
         branchId,
-        provider: config.provider || 'mpesa',
-        consumerKey: config.consumerKey,
-        consumerSecret: config.consumerSecret,
-        shortcode: config.shortcode,
-        passkey: config.passkey,
-        isEnabled: config.isEnabled ?? true,
-        environment: config.environment || 'sandbox',
+        provider,
+        isActive: config.isEnabled ?? true,
+        credentials,
       },
     });
   }

@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateOrderDto, OrderStatus } from './dto/order.dto';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class OrderService {
@@ -50,12 +49,13 @@ export class OrderService {
     return this.prisma.$transaction(async (tx) => {
       const order = await (tx as any).order.create({
         data: {
+          tenantId: dto.tenantId,
           branchId: dto.branchId,
           cashierId,
           terminalId: dto.terminalId,
           orderNumber: this.generateOrderNumber(),
           status,
-          type: dto.type,
+          type: dto.type || 'sale',
           subtotal,
           taxAmount,
           discountAmount,
@@ -129,10 +129,63 @@ export class OrderService {
   }
 
   async cancelOrder(id: string) {
-    await this.findOne(id);
+    const order = await this.findOne(id);
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new BadRequestException('Cannot cancel a completed order. Use void or refund instead.');
+    }
     return this.prisma.extended.order.update({
       where: { id },
       data: { status: OrderStatus.CANCELLED },
     });
   }
+
+  async voidOrder(id: string) {
+    const order = await this.findOne(id);
+    if (order.status === OrderStatus.CANCELLED || order.status === OrderStatus.REFUNDED) {
+      throw new BadRequestException(`Order is already ${order.status}`);
+    }
+    return this.prisma.extended.order.update({
+      where: { id },
+      data: { status: 'voided' },
+    });
+  }
+
+  async refundOrder(id: string, amount?: number, reason?: string) {
+    const order = await this.findOne(id);
+    if (order.status !== OrderStatus.COMPLETED) {
+      throw new BadRequestException('Only completed orders can be refunded');
+    }
+
+    const refundAmount = amount ?? Number(order.total);
+    if (refundAmount > Number(order.total)) {
+      throw new BadRequestException(`Refund amount (${refundAmount}) cannot exceed order total (${order.total})`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Create a refund payment record
+      const refundPayment = await (tx as any).payment.create({
+        data: {
+          orderId: id,
+          branchId: (order as any).branchId,
+          method: 'refund',
+          gateway: 'manual',
+          amount: -refundAmount, // Negative to indicate money out
+          status: 'completed',
+          metadata: { reason: reason || 'Manual refund', originalOrderId: id },
+          paidAt: new Date(),
+        },
+      });
+
+      // If full refund, mark order as refunded
+      if (refundAmount >= Number(order.total)) {
+        await (tx as any).order.update({
+          where: { id },
+          data: { status: OrderStatus.REFUNDED },
+        });
+      }
+
+      return { message: `Refund of Ksh ${refundAmount} processed`, refundPayment };
+    });
+  }
 }
+

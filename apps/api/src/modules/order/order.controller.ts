@@ -15,7 +15,9 @@ export class OrderController {
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   create(@Request() req: any, @Body() createOrderDto: CreateOrderDto) {
     const cashierId = req.user.id;
-    return this.orderService.create(cashierId, createOrderDto);
+    // Inject tenantId from the authenticated user
+    const dto = { ...createOrderDto, tenantId: req.user.tenantId };
+    return this.orderService.create(cashierId, dto);
   }
 
   @Get()
@@ -37,5 +39,20 @@ export class OrderController {
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   cancel(@Param('id') id: string) {
     return this.orderService.cancelOrder(id);
+  }
+
+  @Patch(':id/void')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  void(@Param('id') id: string) {
+    return this.orderService.voidOrder(id);
+  }
+
+  @Post(':id/refund')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  refund(
+    @Param('id') id: string,
+    @Body() body: { amount?: number; reason?: string },
+  ) {
+    return this.orderService.refundOrder(id, body.amount, body.reason);
   }
 }
