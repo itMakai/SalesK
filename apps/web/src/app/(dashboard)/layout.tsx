@@ -47,7 +47,7 @@ export default function DashboardLayout({
   ]
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen overflow-hidden bg-background flex">
       {/* Sidebar */}
       <aside className={`bg-card border-r transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"} hidden md:flex flex-col`}>
         <div className="h-16 flex items-center justify-center border-b">

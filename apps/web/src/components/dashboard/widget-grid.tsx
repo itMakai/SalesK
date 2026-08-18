@@ -43,7 +43,7 @@ const WIDGET_COMPONENTS: Record<string, React.FC> = {
 };
 
 export function WidgetGrid({ isEditable }: WidgetGridProps) {
-  const [layout, setLayout] = useState<Layout[]>([]);
+  const [layout, setLayout] = useState<Layout>([]);
   const [widgets, setWidgets] = useState<WidgetItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { width, containerRef, mounted } = useContainerWidth();
@@ -90,7 +90,7 @@ export function WidgetGrid({ isEditable }: WidgetGridProps) {
   }, []);
 
   // Save layout to API whenever it changes (only in edit mode)
-  const handleLayoutChange = (newLayout: Layout[]) => {
+  const handleLayoutChange = (newLayout: Layout) => {
     setLayout(newLayout);
     if (isEditable) {
       apiClient.put("/dashboard/layout", { layout: newLayout, widgets }).catch(console.error);
