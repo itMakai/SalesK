@@ -17,6 +17,10 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 import { NotificationModule } from './modules/notification/notification.module';
+import { RestaurantModule } from './modules/restaurant/restaurant.module';
+import { ServiceModule } from './modules/service/service.module';
+import { AppointmentModule } from './modules/appointment/appointment.module';
+import { CustomerModule } from './modules/customer/customer.module';
 
 @Module({
   imports: [
@@ -24,7 +28,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     AuthModule, 
     TenantModule, 
     UserModule, 
-    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule, OrderModule, ReceiptModule, PaymentModule, DashboardModule, NotificationModule
+    PrismaModule, BranchModule, CategoryModule, ProductModule, InventoryModule, OrderModule, ReceiptModule, PaymentModule, DashboardModule, NotificationModule, RestaurantModule, ServiceModule, AppointmentModule, CustomerModule
   ],
   controllers: [AppController],
   providers: [AppService],

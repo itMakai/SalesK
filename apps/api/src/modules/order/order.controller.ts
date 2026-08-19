@@ -35,6 +35,12 @@ export class OrderController {
     return this.orderService.getDashboardStats(req.user.tenantId);
   }
 
+  @Get('kds/active')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  getActiveKitchenItems(@Request() req: any, @Query('branchId') branchId: string) {
+    return this.orderService.getActiveKitchenItems(req.user.tenantId, branchId);
+  }
+
   @Get(':id')
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   findOne(@Param('id') id: string) {

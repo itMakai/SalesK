@@ -24,6 +24,10 @@ export class CreateCategoryDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isKitchen?: boolean;
 }
 
 export class UpdateCategoryDto {
@@ -50,4 +54,8 @@ export class UpdateCategoryDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isKitchen?: boolean;
 }

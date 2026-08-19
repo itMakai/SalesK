@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateOrderDto, OrderStatus } from './dto/order.dto';
+import { KdsGateway } from '../restaurant/kds.gateway';
 
 @Injectable()
 export class OrderService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private kdsGateway: KdsGateway,
+  ) {}
 
   // Generate a human-readable order number (e.g., ORD-20260817-1234)
   private generateOrderNumber(): string {
@@ -81,14 +85,42 @@ export class OrderService {
           },
         },
         include: {
-          items: true,
+          items: {
+            include: {
+              product: {
+                include: { category: true },
+              },
+            },
+          },
           payments: true,
+          table: true,
         },
       });
 
-      // 4. (Optional) In a real app, you would dispatch an event here to deduct inventory
+      // 4. Update customer stats if applicable
+      if (dto.customerId && status === OrderStatus.COMPLETED) {
+        const pointsEarned = Math.floor(Number(total) / 100);
+        const pointsDeducted = dto.redeemedPoints || 0;
+        
+        await (tx as any).customer.update({
+          where: { id: dto.customerId },
+          data: {
+            visitCount: { increment: 1 },
+            totalSpent: { increment: Number(total) },
+            loyaltyPoints: { increment: pointsEarned - pointsDeducted },
+          },
+        });
+      }
+
+      // 5. (Optional) In a real app, you would dispatch an event here to deduct inventory
       // We rely on the POS to call the bulk inventory movement endpoint separately, 
       // or we can couple it here.
+
+      // 5. Broadcast to KDS if order type is dine-in or contains kitchen items
+      const hasKitchenItems = order.items.some((item: any) => item.product?.category?.isKitchen);
+      if (order.type === 'dine_in' || hasKitchenItems) {
+        this.kdsGateway.broadcastNewOrder(dto.branchId, order);
+      }
 
       return order;
     });
@@ -213,5 +245,44 @@ export class OrderService {
       return { message: `Refund of Ksh ${refundAmount} processed`, refundPayment };
     });
   }
+
+  async getActiveKitchenItems(tenantId: string, branchId: string) {
+    // Get all pending/completed orders from today that have items with kdsStatus != 'served'
+    // and where product.category.isKitchen is true
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const orders = await this.prisma.extended.order.findMany({
+      where: {
+        tenantId,
+        branchId,
+        createdAt: { gte: today },
+        status: { in: [OrderStatus.PENDING, OrderStatus.COMPLETED] }, // Dine-in might be unpaid (pending) or paid (completed)
+      },
+      include: {
+        table: true,
+        items: {
+          where: {
+            kdsStatus: { not: 'served' },
+          },
+          include: {
+            product: {
+              include: { category: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    // Filter out orders that have no matching items
+    return orders
+      .map(order => ({
+        ...order,
+        items: order.items.filter(item => item.product?.category?.isKitchen)
+      }))
+      .filter(order => order.items.length > 0);
+  }
 }
+
 

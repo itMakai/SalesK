@@ -99,6 +99,10 @@ export class CreateOrderDto {
   @IsOptional()
   discountAmount?: number;
 
+  @IsNumber()
+  @IsOptional()
+  redeemedPoints?: number;
+
   @IsString()
   @IsOptional()
   notes?: string;

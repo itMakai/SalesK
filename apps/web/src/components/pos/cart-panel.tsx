@@ -19,9 +19,17 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useEffect } from "react";
+import useSWR from "swr";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function CartPanel() {
   const [branchId, setBranchId] = useState<string>("default-branch");
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [redeemedPoints, setRedeemedPoints] = useState<number>(0);
+
+  const { data: tables } = useSWR(branchId !== "default-branch" ? `/api/v1/tables?branchId=${branchId}` : null);
+  const { data: customers } = useSWR("/api/v1/customers");
 
   useEffect(() => {
     // Fetch user's branches and select the first one as active to avoid 400 errors
@@ -41,7 +49,10 @@ export function CartPanel() {
 
   const subtotal = getSubtotal();
   const taxTotal = getTaxTotal();
-  const total = getTotal();
+  const baseTotal = getTotal();
+  const total = Math.max(0, baseTotal - redeemedPoints);
+
+  const selectedCustomer = customers?.find((c: any) => c.id === selectedCustomerId);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<any | null>(null);
@@ -63,8 +74,11 @@ export function CartPanel() {
   const createOrder = async (payments?: any[]) => {
     const payload: any = {
       branchId: branchId, 
-      type: "sale",
-      discountAmount: 0,
+      type: selectedTableId ? "dine_in" : "sale",
+      tableId: selectedTableId || undefined,
+      customerId: selectedCustomerId || undefined,
+      discountAmount: redeemedPoints,
+      redeemedPoints: redeemedPoints,
       items: cart.map(item => ({
         productId: item.productId,
         productName: item.name,
@@ -93,6 +107,8 @@ export function CartPanel() {
       alert("Failed to process order.");
     } finally {
       setIsProcessing(false);
+      setRedeemedPoints(0);
+      setSelectedCustomerId(null);
     }
   };
 
@@ -283,6 +299,45 @@ export function CartPanel() {
           </Button>
         </div>
 
+        <div className="px-4 py-2 border-b bg-muted/20 space-y-2">
+          <Select 
+            value={selectedCustomerId || "walk-in"} 
+            onValueChange={(v) => {
+              setSelectedCustomerId(v === "walk-in" ? null : v);
+              setRedeemedPoints(0);
+            }}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue placeholder="Select Customer (Walk-in)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="walk-in">Walk-in Customer</SelectItem>
+              {customers?.map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name} {c.phone ? `(${c.phone})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select 
+            value={selectedTableId || "walk-in"} 
+            onValueChange={(v) => setSelectedTableId(v === "walk-in" ? null : v)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue placeholder="Select Table (Walk-in)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="walk-in">No Table (Walk-in / Takeaway)</SelectItem>
+              {tables?.map((t: any) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name} {t.section ? `(${t.section})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Cart Items */}
         <ScrollArea className="flex-1 p-4">
           {cart.length === 0 ? (
@@ -338,6 +393,41 @@ export function CartPanel() {
                 Ksh {total.toLocaleString()}
               </span>
             </div>
+
+            {selectedCustomer && (
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-dashed">
+                <span className="text-sm font-medium text-purple-600 flex items-center">
+                  Points: {selectedCustomer.loyaltyPoints - redeemedPoints}
+                </span>
+                {selectedCustomer.loyaltyPoints > 0 && redeemedPoints === 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6 text-xs text-purple-600 border-purple-200 hover:bg-purple-50"
+                    onClick={() => {
+                      const maxPoints = selectedCustomer.loyaltyPoints;
+                      const toRedeem = Math.min(maxPoints, baseTotal);
+                      setRedeemedPoints(toRedeem);
+                    }}
+                  >
+                    Redeem Points
+                  </Button>
+                )}
+                {redeemedPoints > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-semibold text-green-600">- Ksh {redeemedPoints}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 w-6 p-0 text-red-500"
+                      onClick={() => setRedeemedPoints(0)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-2">

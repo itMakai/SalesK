@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Download, Upload, Search, Settings } from "lucide-react";
+import { Plus, Download, Upload, Search, Settings, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,14 +14,16 @@ import {
 } from "@/components/ui/table";
 import { apiClient } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
+import { BranchPricingModal } from "@/components/products/branch-pricing-modal";
 
 export default function ProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  useEffect(() => {
-    // Fetch products
+  const loadProducts = () => {
     apiClient.get("/products")
       .then((res) => {
         setProducts(res.data || []);
@@ -29,6 +31,10 @@ export default function ProductsPage() {
       .catch((err) => {
         console.error("Failed to load products", err);
       });
+  };
+
+  useEffect(() => {
+    loadProducts();
   }, []);
 
   const handleExport = async () => {
@@ -119,6 +125,17 @@ export default function ProductsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      title="Set Branch Pricing"
+                      onClick={() => {
+                        setSelectedProduct(product)
+                        setIsPricingModalOpen(true)
+                      }}
+                    >
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                     <Button variant="ghost" size="icon">
                       <Settings className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -129,6 +146,15 @@ export default function ProductsPage() {
           </TableBody>
         </Table>
       </div>
+      <BranchPricingModal 
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+        product={selectedProduct}
+        onSuccess={() => {
+          setIsPricingModalOpen(false)
+          loadProducts()
+        }}
+      />
     </div>
   );
 }

@@ -1,14 +1,19 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
-  title: "SalesK",
-  description: "Advanced POS system for multi-branch businesses",
+  title: { default: "SalesK", template: "%s · SalesK" },
+  description: "Advanced multi-branch POS & business management platform",
 }
+
+import { SWRProvider } from "@/components/swr-provider"
 
 export default function RootLayout({
   children,
@@ -16,16 +21,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <SWRProvider>
           {children}
-        </ThemeProvider>
+        </SWRProvider>
       </body>
     </html>
   )
