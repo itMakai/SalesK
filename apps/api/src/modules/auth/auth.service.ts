@@ -102,6 +102,7 @@ export class AuthService {
       where: { email: dto.email },
       include: {
         staffAssignments: true,
+        tenant: { select: { businessType: true } },
       },
     });
 
@@ -128,7 +129,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user, activeBranchId);
 
     return {
-      user: this.sanitizeUser(user),
+      user: { ...this.sanitizeUser(user), businessType: user.tenant.businessType },
       tokens,
     };
   }
@@ -141,6 +142,7 @@ export class AuthService {
           some: { branchId: dto.branchId },
         },
       },
+      include: { tenant: { select: { businessType: true } } },
     });
 
     if (!user || !user.isActive) {
@@ -155,7 +157,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user, dto.branchId);
 
     return {
-      user: this.sanitizeUser(user),
+      user: { ...this.sanitizeUser(user), businessType: user.tenant.businessType },
       tokens,
     };
   }
@@ -228,7 +230,7 @@ export class AuthService {
   }
 
   private sanitizeUser(user: any) {
-    const { passwordHash, twoFactorSecret, pin, ...sanitizedUser } = user;
+    const { passwordHash, twoFactorSecret, pin, tenant, ...sanitizedUser } = user;
     return sanitizedUser;
   }
 

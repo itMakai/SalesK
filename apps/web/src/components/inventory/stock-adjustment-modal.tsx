@@ -73,7 +73,7 @@ export function StockAdjustmentModal({ isOpen, onClose, inventoryItem, onSuccess
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="type">Movement Type</Label>
-            <Select value={type} onValueChange={setType}>
+            <Select value={type} onValueChange={(value) => setType(value ?? "adjustment")}>
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>

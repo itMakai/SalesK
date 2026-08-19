@@ -112,7 +112,7 @@ export default function InventoryPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={branchFilter} onValueChange={setBranchFilter}>
+          <Select value={branchFilter} onValueChange={(value) => setBranchFilter(value ?? "all")}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All Branches" />
             </SelectTrigger>

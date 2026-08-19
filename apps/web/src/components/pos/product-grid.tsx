@@ -1,7 +1,7 @@
 "use client";
 
 import { usePosStore } from "@/stores/pos-store";
-import { Package } from "lucide-react";
+import { Package, ScanBarcode, Sparkles } from "lucide-react";
 
 interface Product {
   id: string;
@@ -22,6 +22,16 @@ export function ProductGrid({ products }: ProductGridProps) {
   const activeCategoryId = usePosStore((state) => state.activeCategoryId);
   const searchQuery = usePosStore((state) => state.searchQuery);
   const addToCart = usePosStore((state) => state.addToCart);
+
+  const apiHost = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1").replace(/\/api\/v1$/, "");
+
+  const resolveImageSrc = (image: string) => {
+    if (image.startsWith("http")) {
+      return image;
+    }
+
+    return `${apiHost}${image}`;
+  };
 
   // Filter logic
   const filteredProducts = products.filter((p) => {
@@ -44,16 +54,18 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   if (filteredProducts.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground mt-20">
-        <Package className="w-16 h-16 mb-4 opacity-50" />
-        <p className="text-lg">No products found.</p>
-        <p className="text-sm">Try adjusting your search or category filter.</p>
+      <div className="mt-20 flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/5 px-6 py-14 text-center text-muted-foreground">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 via-emerald-500/20 to-fuchsia-500/20 text-cyan-200">
+          <Package className="h-8 w-8" />
+        </div>
+        <p className="text-lg font-semibold text-white">No products found</p>
+        <p className="text-sm text-slate-400">Try adjusting search, category filters, or barcode input.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {filteredProducts.map((product) => (
         <button
           key={product.id}
@@ -66,26 +78,43 @@ export function ProductGrid({ products }: ProductGridProps) {
               taxRate: product.taxRate,
             })
           }
-          className="flex flex-col bg-card border rounded-lg overflow-hidden hover:ring-2 ring-primary transition-all text-left shadow-sm hover:shadow-md"
+          className="group flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-card/80 text-left shadow-lg shadow-cyan-500/5 transition-all duration-200 hover:-translate-y-1 hover:border-cyan-400/30 hover:shadow-cyan-500/10"
         >
-          <div className="aspect-square bg-muted flex items-center justify-center w-full shrink-0">
+          <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
             {product.image ? (
               <img 
-                src={product.image.startsWith('http') ? product.image : `http://localhost:4000${product.image}`} 
+                src={resolveImageSrc(product.image)} 
                 alt={product.name} 
-                className="object-cover w-full h-full" 
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
               />
             ) : (
-              <Package className="w-8 h-8 text-muted-foreground/50" />
+              <div className="flex h-full w-full items-center justify-center text-cyan-200/60">
+                <Package className="h-10 w-10" />
+              </div>
             )}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent p-3">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-slate-300">
+                <span>{product.sku || "No SKU"}</span>
+                <span className="flex items-center gap-1 text-cyan-200">
+                  <ScanBarcode className="h-3 w-3" />
+                  Scan ready
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="p-3 flex flex-col flex-1">
-            <span className="font-medium text-sm line-clamp-2 leading-tight flex-1">
+          <div className="flex flex-1 flex-col p-3">
+            <span className="line-clamp-2 flex-1 text-sm font-medium leading-tight text-white">
               {product.name}
             </span>
-            <span className="text-primary font-bold mt-2">
-              Ksh {Number(product.basePrice).toLocaleString()}
-            </span>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">
+                {product.barcode ? product.barcode : "No barcode"}
+              </span>
+              <span className="flex items-center gap-1 text-sm font-semibold text-cyan-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                Ksh {Number(product.basePrice).toLocaleString()}
+              </span>
+            </div>
           </div>
         </button>
       ))}

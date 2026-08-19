@@ -30,6 +30,7 @@ const inviteSchema = z.object({
   firstName: z.string().min(2),
   lastName: z.string().min(2),
   role: z.string().min(1),
+  password: z.string().min(8, "Use at least 8 characters"),
   branchId: z.string().optional(),
 })
 
@@ -63,10 +64,14 @@ export function InviteStaffModal({
     try {
       setIsLoading(true)
       setError("")
-      // Since we didn't build an explicit "invite" endpoint in the backend week,
-      // we'll simulate adding a user by calling a hypothetical /users or using the tenant module.
-      // In a real app this would trigger an email invite. Here we'll just mock a success API call.
-      await new Promise(resolve => setTimeout(resolve, 800))
+      await apiClient.post("/users/invite", {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        branchIds: data.branchId === "all" ? branches.map((branch) => branch.id) : data.branchId ? [data.branchId] : [],
+      })
       
       onSuccess()
       onOpenChange(false)
@@ -82,9 +87,9 @@ export function InviteStaffModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Invite Staff</DialogTitle>
+          <DialogTitle>Add staff member</DialogTitle>
           <DialogDescription>
-            Add a new team member and assign them a role and branch.
+            Create their account now—no invitation email is required.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -108,6 +113,12 @@ export function InviteStaffModal({
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" {...register("email")} />
               {errors.email && <span className="text-xs text-red-500">{errors.email.message}</span>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="staff-password">Temporary password</Label>
+              <Input id="staff-password" type="password" autoComplete="new-password" {...register("password")} />
+              {errors.password && <span className="text-xs text-red-500">{errors.password.message}</span>}
             </div>
 
             <div className="space-y-2">
@@ -142,7 +153,7 @@ export function InviteStaffModal({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Inviting..." : "Send Invite"}
+              {isLoading ? "Creating..." : "Create staff account"}
             </Button>
           </DialogFooter>
         </form>

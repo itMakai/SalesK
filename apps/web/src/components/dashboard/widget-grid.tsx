@@ -140,9 +140,6 @@ export function WidgetGrid({ isEditable }: WidgetGridProps) {
         rowHeight={30}
         width={width}
         onLayoutChange={(currentLayout, allLayouts) => handleLayoutChange(currentLayout)}
-        isDraggable={isEditable}
-        isResizable={isEditable}
-        draggableHandle=".drag-handle"
       >
         {widgets.map((widget) => {
           const WidgetComponent = WIDGET_COMPONENTS[widget.type] || (() => <div>Unknown</div>);

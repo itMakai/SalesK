@@ -40,7 +40,7 @@ export function ServiceModal({ isOpen, onClose, service, onSuccess }: ServiceMod
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isEditing = !!service
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.input<typeof formSchema>, any, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -70,13 +70,13 @@ export function ServiceModal({ isOpen, onClose, service, onSuccess }: ServiceMod
     }
   }, [isOpen, service, form])
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.output<typeof formSchema>) => {
     try {
       setIsSubmitting(true)
       if (isEditing) {
-        await apiClient.patch(`/api/v1/services/${service.id}`, values)
+        await apiClient.patch(`/services/${service.id}`, values)
       } else {
-        await apiClient.post("/api/v1/services", values)
+        await apiClient.post("/services", values)
       }
       onSuccess()
     } catch (error) {
@@ -132,7 +132,7 @@ export function ServiceModal({ isOpen, onClose, service, onSuccess }: ServiceMod
                   <FormItem>
                     <FormLabel>Price (Ksh)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="0" {...field} />
+                      <Input type="number" min="0" {...field} value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -146,7 +146,7 @@ export function ServiceModal({ isOpen, onClose, service, onSuccess }: ServiceMod
                   <FormItem>
                     <FormLabel>Duration (Mins)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="5" step="5" {...field} />
+                      <Input type="number" min="5" step="5" {...field} value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

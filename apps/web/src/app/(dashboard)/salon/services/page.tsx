@@ -25,7 +25,7 @@ export default function ServicesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this service?")) return
     try {
-      await apiClient.delete(`/api/v1/services/${id}`)
+      await apiClient.delete(`/services/${id}`)
       mutate()
     } catch (err) {
       console.error("Failed to delete service", err)

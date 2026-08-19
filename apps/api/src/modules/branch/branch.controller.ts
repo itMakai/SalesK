@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { BranchService } from './branch.service';
 import { CreateBranchDto, UpdateBranchDto } from './dto/branch.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -18,13 +18,13 @@ export class BranchController {
   }
 
   @Get()
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
-  findAll() {
-    return this.branchService.findAll();
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  findAll(@Request() req: any) {
+    return this.branchService.findAll(req.user);
   }
 
   @Get(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   findOne(@Param('id') id: string) {
     return this.branchService.findOne(id);
   }

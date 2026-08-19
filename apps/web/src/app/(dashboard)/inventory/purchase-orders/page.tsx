@@ -36,7 +36,7 @@ export default function PurchaseOrdersPage() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      await apiClient.patch(`/api/v1/purchase-orders/${id}/status`, { status })
+      await apiClient.patch(`/purchase-orders/${id}/status`, { status })
       mutate()
     } catch (error) {
       console.error("Failed to update status", error)

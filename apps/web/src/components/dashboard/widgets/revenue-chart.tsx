@@ -36,7 +36,7 @@ export function RevenueChartWidget() {
                 tickFormatter={(value) => `Ksh ${value}`}
               />
               <Tooltip 
-                formatter={(value: number) => [`KES ${value.toLocaleString()}`, 'Revenue']}
+                formatter={(value: any) => [`KES ${Number(value ?? 0).toLocaleString()}`, 'Revenue']}
                 labelStyle={{ color: 'black' }}
               />
               <Line 

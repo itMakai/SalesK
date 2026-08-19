@@ -37,7 +37,7 @@ export default function StockTransfersPage() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      await apiClient.patch(`/api/v1/stock-transfers/${id}/status`, { status })
+      await apiClient.patch(`/stock-transfers/${id}/status`, { status })
       mutate()
     } catch (error) {
       console.error("Failed to update status", error)

@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { CashierDashboard } from "@/components/dashboard/cashier-dashboard";
 
 export default function DashboardHomePage() {
   const user = useAuthStore((state) => state.user);
@@ -12,6 +13,8 @@ export default function DashboardHomePage() {
 
   // Only allow admin or owner to edit the dashboard
   const canEdit = user?.role === "admin" || user?.role === "owner";
+
+  if (user?.role === "cashier") return <CashierDashboard />
 
   return (
     <div className="space-y-6">

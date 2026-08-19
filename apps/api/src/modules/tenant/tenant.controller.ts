@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -13,9 +13,18 @@ export class TenantController {
   constructor(private readonly tenantService: TenantService) {}
 
   @Get()
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   getTenant(@CurrentTenantId() tenantId: string) {
     return this.tenantService.getTenant(tenantId);
+  }
+
+  @Post('notifications')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  async createOperationalNotification(@CurrentTenantId() tenantId: string, @Request() req: any, @Body() body: { type: string; message: string; branchId?: string }) {
+    const tenant = await this.tenantService.getTenant(tenantId);
+    const settings = tenant.settings as Record<string, any>;
+    const notifications = Array.isArray(settings.cashierNotifications) ? settings.cashierNotifications : [];
+    return this.tenantService.updateSettings(tenantId, { cashierNotifications: [{ type: body.type, message: body.message, branchId: body.branchId, createdBy: req.user.id, createdAt: new Date().toISOString() }, ...notifications].slice(0, 100) });
   }
 
   @Patch()

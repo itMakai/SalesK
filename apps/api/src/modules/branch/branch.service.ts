@@ -25,7 +25,14 @@ export class BranchService {
     });
   }
 
-  async findAll() {
+  async findAll(user?: { id: string; role?: string }) {
+    if (user?.role === 'cashier') {
+      const assignments = await this.prisma.extended.staffAssignment.findMany({
+        where: { userId: user.id },
+        include: { branch: { include: { taxConfig: true } } },
+      });
+      return assignments.map((assignment: any) => assignment.branch);
+    }
     return this.prisma.extended.branch.findMany({
       orderBy: { createdAt: 'desc' },
       include: { taxConfig: true },

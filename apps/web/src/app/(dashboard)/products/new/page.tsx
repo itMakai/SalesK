@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Save, ArrowLeft, UploadCloud } from "lucide-react";
+import { Save, ArrowLeft, ScanLine, UploadCloud } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api-client";
 import { CategoryModal } from "@/components/dashboard/products/category-modal";
+import { BarcodeScannerDialog } from "@/components/barcode-scanner-dialog";
 
 const productSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -32,6 +33,7 @@ export default function NewProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCategoryModalOpen, setCategoryModalOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const {
     register,
@@ -119,7 +121,7 @@ export default function NewProductPage() {
                     <Input id="sku" placeholder="IPH-15P-128" {...register("sku")} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="barcode">Barcode</Label>
+                    <div className="flex items-center justify-between"><Label htmlFor="barcode">Barcode / QR code</Label><Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => setScannerOpen(true)}><ScanLine className="mr-1 h-4 w-4" /> Scan</Button></div>
                     <Input id="barcode" placeholder="123456789012" {...register("barcode")} />
                   </div>
                 </div>
@@ -216,6 +218,7 @@ export default function NewProductPage() {
           setValue("categoryId", category.id, { shouldValidate: true });
         }}
       />
+      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onDetected={(value) => setValue("barcode", value, { shouldDirty: true })} />
     </div>
   );
 }

@@ -162,7 +162,12 @@ export class OrderService {
       orderBy: { createdAt: 'desc' },
       include: {
         cashier: { select: { firstName: true, lastName: true } },
-        customer: { select: { name: true } },
+        customer: { select: { id: true, name: true } },
+        items: {
+          include: {
+            product: true,
+          },
+        },
         payments: true,
       },
     });
@@ -197,14 +202,17 @@ export class OrderService {
     });
   }
 
-  async voidOrder(id: string) {
+  async voidOrder(id: string, reason?: string) {
     const order = await this.findOne(id);
     if (order.status === OrderStatus.CANCELLED || order.status === OrderStatus.REFUNDED) {
       throw new BadRequestException(`Order is already ${order.status}`);
     }
     return this.prisma.extended.order.update({
       where: { id },
-      data: { status: 'voided' },
+      data: {
+        status: 'voided',
+        notes: reason ? `${order.notes || ''}${order.notes ? '\n' : ''}Voided: ${reason}` : order.notes,
+      },
     });
   }
 
@@ -244,6 +252,10 @@ export class OrderService {
 
       return { message: `Refund of Ksh ${refundAmount} processed`, refundPayment };
     });
+  }
+
+  async returnOrder(id: string, reason?: string) {
+    return this.refundOrder(id, undefined, reason || 'Customer return');
   }
 
   async getActiveKitchenItems(tenantId: string, branchId: string) {

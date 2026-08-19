@@ -4,7 +4,8 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@/lib/utils"
-import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { ChevronDownIcon, CheckIcon, ChevronUpIcon, Search } from "lucide-react"
 
 const Select = SelectPrimitive.Root
 
@@ -26,6 +27,53 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
       {...props}
     />
   )
+}
+
+function getNodeText(node: React.ReactNode): string {
+  if (node === null || node === undefined || typeof node === "boolean") {
+    return ""
+  }
+
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node)
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(getNodeText).join(" ")
+  }
+
+  if (React.isValidElement(node)) {
+    const element = node as React.ReactElement<{ children?: React.ReactNode }>
+    return getNodeText(element.props.children)
+  }
+
+  return ""
+}
+
+function filterSelectChildren(children: React.ReactNode, query: string): React.ReactNode {
+  const normalizedQuery = query.trim().toLowerCase()
+
+  if (!normalizedQuery) {
+    return children
+  }
+
+  return React.Children.toArray(children).flatMap((child) => {
+    if (!React.isValidElement<any>(child)) {
+      return [child]
+    }
+
+    const element = child as React.ReactElement<{ children?: React.ReactNode }>
+
+    if (element.type === SelectGroup) {
+      const filteredChildren = filterSelectChildren(element.props.children, query)
+      return React.Children.count(filteredChildren) > 0
+        ? [React.cloneElement(element, undefined, filteredChildren)]
+        : []
+    }
+
+    const text = getNodeText(element.props.children).toLowerCase()
+    return text.includes(normalizedQuery) ? [element] : []
+  })
 }
 
 function SelectTrigger({
@@ -70,6 +118,9 @@ function SelectContent({
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   >) {
+  const [query, setQuery] = React.useState("")
+  const filteredChildren = React.useMemo(() => filterSelectChildren(children, query), [children, query])
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -86,8 +137,27 @@ function SelectContent({
           className={cn("relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
           {...props}
         >
+          <div className="sticky top-0 z-20 border-b border-border/60 bg-popover p-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Filter options..."
+                className="h-8 pl-8"
+                onKeyDown={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+              />
+            </div>
+          </div>
           <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          <SelectPrimitive.List>
+            {React.Children.count(filteredChildren) > 0 ? (
+              filteredChildren
+            ) : (
+              <div className="px-3 py-6 text-sm text-muted-foreground">No matching options.</div>
+            )}
+          </SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>

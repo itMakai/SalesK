@@ -52,7 +52,7 @@ export function PurchaseOrderModal({ isOpen, onClose, onSuccess, branchId }: Pur
   const { data: suppliers } = useSWR('/api/v1/suppliers')
   const { data: products } = useSWR('/api/v1/products')
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.input<typeof formSchema>, any, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       supplierId: "",
@@ -78,12 +78,12 @@ export function PurchaseOrderModal({ isOpen, onClose, onSuccess, branchId }: Pur
     }
   }, [isOpen, form])
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.output<typeof formSchema>) => {
     if (!branchId) return
 
     try {
       setIsSubmitting(true)
-      await apiClient.post("/api/v1/purchase-orders", {
+      await apiClient.post("/purchase-orders", {
         branchId,
         ...values,
       })
@@ -129,7 +129,7 @@ export function PurchaseOrderModal({ isOpen, onClose, onSuccess, branchId }: Pur
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Supplier *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={(value) => field.onChange(value ?? "")} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select supplier" />
@@ -182,12 +182,13 @@ export function PurchaseOrderModal({ isOpen, onClose, onSuccess, branchId }: Pur
                     render={({ field: selectField }) => (
                       <FormItem className="flex-1">
                         <FormLabel className="text-xs">Product</FormLabel>
-                        <Select 
+                          <Select 
                           onValueChange={(val) => {
-                            selectField.onChange(val)
-                            handleProductSelect(index, val)
+                            const selectedValue = val ?? ""
+                            selectField.onChange(selectedValue)
+                            handleProductSelect(index, selectedValue)
                           }} 
-                          value={selectField.value}
+                            value={typeof selectField.value === "string" ? selectField.value : ""}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -212,7 +213,7 @@ export function PurchaseOrderModal({ isOpen, onClose, onSuccess, branchId }: Pur
                       <FormItem className="w-24">
                         <FormLabel className="text-xs">Qty</FormLabel>
                         <FormControl>
-                          <Input type="number" min="0.001" step="any" {...inputField} />
+                          <Input type="number" min="0.001" step="any" {...inputField} value={typeof inputField.value === "number" ? inputField.value : ""} onChange={(e) => inputField.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -226,7 +227,7 @@ export function PurchaseOrderModal({ isOpen, onClose, onSuccess, branchId }: Pur
                       <FormItem className="w-32">
                         <FormLabel className="text-xs">Unit Cost</FormLabel>
                         <FormControl>
-                          <Input type="number" min="0" step="any" {...inputField} />
+                            <Input type="number" min="0" step="any" {...inputField} value={typeof inputField.value === "number" ? inputField.value : ""} onChange={(e) => inputField.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -271,7 +272,7 @@ export function PurchaseOrderModal({ isOpen, onClose, onSuccess, branchId }: Pur
                     <Textarea 
                       placeholder="Delivery instructions..." 
                       className="resize-none"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

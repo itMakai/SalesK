@@ -47,7 +47,7 @@ export function BranchPricingModal({ isOpen, onClose, product, onSuccess }: Bran
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { data: branches } = useSWR('/api/v1/branches')
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.input<typeof formSchema>, any, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       branchPricing: [],
@@ -76,12 +76,12 @@ export function BranchPricingModal({ isOpen, onClose, product, onSuccess }: Bran
     }
   }, [isOpen, product, branches, form])
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.output<typeof formSchema>) => {
     if (!product) return
 
     try {
       setIsSubmitting(true)
-      await apiClient.patch(`/api/v1/products/${product.id}/branch-pricing`, values.branchPricing)
+      await apiClient.patch(`/products/${product.id}/branch-pricing`, values.branchPricing)
       onSuccess()
     } catch (error) {
       console.error("Failed to update branch pricing:", error)
@@ -118,12 +118,14 @@ export function BranchPricingModal({ isOpen, onClose, product, onSuccess }: Bran
                         <FormItem className="flex items-center space-x-2 space-y-0">
                           <FormLabel className="text-xs text-muted-foreground m-0">KES</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01" 
-                              className="w-24 h-8 text-right" 
-                              {...inputField} 
-                            />
+                              <Input 
+                                type="number" 
+                                step="0.01" 
+                                className="w-24 h-8 text-right" 
+                                {...inputField}
+                                value={typeof inputField.value === "number" ? inputField.value : ""}
+                                onChange={(e) => inputField.onChange(e.target.value === "" ? "" : Number(e.target.value))}
+                              />
                           </FormControl>
                         </FormItem>
                       )}

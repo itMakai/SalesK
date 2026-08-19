@@ -50,7 +50,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, currentBranchId }: T
   const { data: branches } = useSWR('/api/v1/branches')
   const { data: inventory } = useSWR(currentBranchId ? `/api/v1/inventory?branchId=${currentBranchId}` : null)
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.input<typeof formSchema>, any, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       toBranchId: "",
@@ -74,12 +74,12 @@ export function TransferModal({ isOpen, onClose, onSuccess, currentBranchId }: T
     }
   }, [isOpen, form])
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.output<typeof formSchema>) => {
     if (!currentBranchId) return
 
     try {
       setIsSubmitting(true)
-      await apiClient.post("/api/v1/stock-transfers", {
+      await apiClient.post("/stock-transfers", {
         fromBranchId: currentBranchId,
         ...values,
       })
@@ -113,16 +113,20 @@ export function TransferModal({ isOpen, onClose, onSuccess, currentBranchId }: T
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Destination Branch *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={(value) => field.onChange(value ?? "")} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select destination" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {destinationBranches.map((b: any) => (
-                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                      ))}
+                        {destinationBranches.length > 0 ? (
+                          destinationBranches.map((b: any) => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="__empty" disabled>No other branches available</SelectItem>
+                        )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -151,18 +155,22 @@ export function TransferModal({ isOpen, onClose, onSuccess, currentBranchId }: T
                     render={({ field: selectField }) => (
                       <FormItem className="flex-1">
                         <FormLabel className="text-xs">Inventory Item</FormLabel>
-                        <Select onValueChange={selectField.onChange} value={selectField.value}>
+                        <Select onValueChange={(value) => selectField.onChange(value ?? "")} value={typeof selectField.value === "string" ? selectField.value : ""}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select item to transfer" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {inventory?.map((inv: any) => (
-                              <SelectItem key={inv.productId} value={inv.productId}>
-                                {inv.product.name} (In Stock: {inv.quantity} {inv.product.unit})
-                              </SelectItem>
-                            ))}
+                            {inventory?.length > 0 ? (
+                              inventory.map((inv: any) => (
+                                <SelectItem key={inv.productId} value={inv.productId}>
+                                  {inv.product.name} (In Stock: {inv.quantity} {inv.product.unit})
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="__empty" disabled>No inventory items found</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -177,7 +185,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, currentBranchId }: T
                       <FormItem className="w-32">
                         <FormLabel className="text-xs">Qty to Transfer</FormLabel>
                         <FormControl>
-                          <Input type="number" min="0.001" step="any" {...inputField} />
+                            <Input type="number" min="0.001" step="any" {...inputField} value={typeof inputField.value === "number" ? inputField.value : ""} onChange={(e) => inputField.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

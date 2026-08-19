@@ -43,7 +43,7 @@ export function PaymentBreakdownWidget() {
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: number) => [`KES ${value.toLocaleString()}`, 'Amount']}
+                formatter={(value: any) => [`KES ${Number(value ?? 0).toLocaleString()}`, 'Amount']}
                 labelStyle={{ color: 'black' }}
               />
               <Legend verticalAlign="bottom" height={36} iconType="circle" />

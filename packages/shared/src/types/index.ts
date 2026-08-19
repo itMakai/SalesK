@@ -140,6 +140,42 @@ export interface IOrder {
   updatedAt: string;
 }
 
+// ─── POS Terminal ───
+export interface IPosTicket {
+  id: string;
+  label: string;
+  branchId: string;
+  customerId?: string | null;
+  tableId?: string | null;
+  discountAmount: number;
+  promotionCode?: string | null;
+  notes?: string;
+  items: IOrderItem[];
+  createdAt: string;
+}
+
+export interface IShiftSession {
+  id: string;
+  branchId: string;
+  openedAt: string;
+  closedAt?: string;
+  openedBy?: string;
+  openingFloat: number;
+  countedCash?: number;
+  expectedCash?: number;
+  variance?: number;
+  notes?: string;
+  status: 'open' | 'closed';
+}
+
+export interface IPromotionRule {
+  code: string;
+  label: string;
+  type: 'fixed' | 'percentage' | 'bundle' | 'loyalty';
+  amount: number;
+  description?: string;
+}
+
 export interface IOrderItem {
   id: string;
   orderId: string;

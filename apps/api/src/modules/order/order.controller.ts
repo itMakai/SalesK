@@ -55,8 +55,14 @@ export class OrderController {
 
   @Patch(':id/void')
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
-  void(@Param('id') id: string) {
-    return this.orderService.voidOrder(id);
+  void(@Param('id') id: string, @Body() body: { reason?: string }) {
+    return this.orderService.voidOrder(id, body.reason);
+  }
+
+  @Post(':id/return')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  returnOrder(@Param('id') id: string, @Body() body: { reason?: string }) {
+    return this.orderService.returnOrder(id, body.reason);
   }
 
   @Post(':id/refund')

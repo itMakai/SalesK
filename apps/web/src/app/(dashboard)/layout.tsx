@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import {
   Users, Settings, LayoutDashboard, Store, ShoppingCart,
-  Menu, Package, Utensils, BarChart3, Calendar, ChevronDown,
+  Menu, Package, Utensils, BarChart3, Calendar, ChevronDown, Sparkles,
   LogOut, Building2, X, ChevronRight,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
@@ -19,14 +19,16 @@ type NavItem = {
   href?: string
   icon: React.ElementType
   children?: NavChild[]
+  roles?: string[]
 }
 
 const navigation: NavItem[] = [
-  { name: "Dashboard",    href: "/",         icon: LayoutDashboard },
-  { name: "POS Terminal", href: "/pos",       icon: Store },
-  { name: "Orders",       href: "/orders",    icon: ShoppingCart },
+  { name: "Dashboard",    href: "/",         icon: LayoutDashboard, roles: ["owner", "admin", "manager", "cashier", "viewer"] },
+  { name: "POS Terminal", href: "/pos",       icon: Store, roles: ["owner", "admin", "manager", "cashier"] },
+  { name: "Orders",       href: "/orders",    icon: ShoppingCart, roles: ["owner", "admin", "manager", "cashier"] },
+  { name: "Products",     href: "/products",  icon: Package, roles: ["owner", "admin", "manager"] },
   {
-    name: "Inventory", icon: Package,
+    name: "Inventory", icon: Package, roles: ["owner", "admin", "manager"],
     children: [
       { name: "Stock Management",  href: "/inventory" },
       { name: "Purchase Orders",   href: "/inventory/purchase-orders" },
@@ -35,24 +37,34 @@ const navigation: NavItem[] = [
     ],
   },
   {
-    name: "Restaurant", icon: Utensils,
+    name: "Restaurant", icon: Utensils, roles: ["owner", "admin", "manager", "cashier"],
     children: [
       { name: "Floor Plan",       href: "/restaurant/tables" },
       { name: "Kitchen Display",  href: "/restaurant/kds" },
     ],
   },
   {
-    name: "Salon & Clinic", icon: Calendar,
+    name: "Salon & Clinic", icon: Calendar, roles: ["owner", "admin", "manager", "cashier"],
     children: [
       { name: "Appointments", href: "/salon/calendar" },
       { name: "Services",     href: "/salon/services" },
     ],
   },
-  { name: "Customers",   href: "/customers",       icon: Users },
-  { name: "Reports",     href: "/reports",          icon: BarChart3 },
-  { name: "Staff",       href: "/settings/staff",   icon: Users },
-  { name: "Settings",   href: "/settings",          icon: Settings },
+  { name: "Customers",   href: "/customers",       icon: Users, roles: ["owner", "admin", "manager", "cashier"] },
+  { name: "Reports",     href: "/reports",          icon: BarChart3, roles: ["owner", "admin", "manager", "viewer"] },
+  { name: "Staff",       href: "/settings/staff",   icon: Users, roles: ["owner", "admin"] },
+  { name: "Settings",   href: "/settings",          icon: Settings, roles: ["owner", "admin"] },
 ]
+
+function getNavigation(businessType?: string, role?: string) {
+  const type = businessType?.toLowerCase()
+  return navigation.filter((item) => {
+    if (item.roles && !item.roles.includes(role || "")) return false
+    if (item.name === "Restaurant") return type === "restaurant"
+    if (item.name === "Salon & Clinic") return type === "salon" || type === "clinic"
+    return true
+  })
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
@@ -65,6 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const setCurrentBranch = useAuthStore(s => s.setCurrentBranch)
 
   const [branches,       setBranches]       = useState<any[]>([])
+  const [tenant,         setTenant]         = useState<{ name: string; logo?: string } | null>(null)
   const [isSidebarOpen,  setSidebarOpen]    = useState(true)
   const [openGroups,     setOpenGroups]     = useState<string[]>(["Inventory"])
   const [isHydrated,     setIsHydrated]     = useState(false)
@@ -83,6 +96,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [isHydrated, token])
 
   useEffect(() => {
+    if (isHydrated && token) apiClient.get("/tenant").then((res) => setTenant(res.data)).catch(console.error)
+  }, [isHydrated, token])
+
+  useEffect(() => {
     if (isHydrated && !token) router.push("/login")
   }, [token, router, isHydrated])
 
@@ -97,36 +114,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!isHydrated || !user) return null
 
+  const visibleNavigation = getNavigation(user.businessType, user.role)
+
   const toggleGroup = (name: string) =>
     setOpenGroups(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
 
   const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
 
   return (
-    <div className="h-screen overflow-hidden flex" style={{ background: "oklch(0.11 0.018 264)" }}>
+    <div className="h-screen overflow-hidden flex bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(236,72,153,0.14),_transparent_22%),linear-gradient(180deg,_rgba(10,14,30,1)_0%,_rgba(11,15,28,1)_100%)]">
 
       {/* ── Sidebar ─────────────────────────────────────────────── */}
       <aside
-        className={`flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out border-r border-white/[0.06]
+        className={`flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out border-r border-white/10 backdrop-blur-xl
           ${isSidebarOpen ? "w-60" : "w-[72px]"}`}
-        style={{ background: "oklch(0.12 0.020 264)" }}
+        style={{ background: "rgba(11, 15, 28, 0.82)" }}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-white/[0.06] flex-shrink-0">
+        <div className="h-16 flex items-center px-4 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, oklch(0.65 0.22 290), oklch(0.55 0.22 260))" }}>
-              <span className="text-white font-bold text-sm">S</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/15 text-cyan-300 shadow-lg shadow-cyan-500/10">
+              <Building2 className="h-5 w-5" />
             </div>
             {isSidebarOpen && (
-              <span className="font-bold text-lg tracking-tight gradient-text select-none">SalesK</span>
+              <span className="truncate font-bold text-lg tracking-tight text-white select-none">{tenant?.name || "Your Business"}</span>
             )}
           </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
-          {navigation.map(item => {
+          {visibleNavigation.map(item => {
             if (item.children) {
               const isGroupOpen = openGroups.includes(item.name)
               const isGroupActive = item.children.some(c => pathname?.startsWith(c.href))
@@ -136,8 +154,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={() => isSidebarOpen && toggleGroup(item.name)}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 group
                       ${isGroupActive
-                        ? "text-violet-300"
-                        : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+                        ? "text-cyan-300"
+                        : "text-white/50 hover:text-white/80 hover:bg-white/5"
                       }`}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
@@ -150,7 +168,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </button>
 
                   {isSidebarOpen && isGroupOpen && (
-                    <div className="ml-3 mt-0.5 pl-4 border-l border-white/[0.08] space-y-0.5">
+                    <div className="ml-3 mt-0.5 pl-4 border-l border-white/10 space-y-0.5">
                       {item.children.map(child => {
                         const isActive = pathname === child.href || pathname?.startsWith(`${child.href}/`)
                         return (
@@ -159,8 +177,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             href={child.href}
                             className={`flex items-center px-3 py-1.5 rounded-md text-[13px] transition-all duration-150
                               ${isActive
-                                ? "bg-violet-500/15 text-violet-300 font-medium"
-                                : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
+                                ? "bg-cyan-500/15 text-cyan-300 font-medium"
+                                : "text-white/40 hover:text-white/70 hover:bg-white/5"
                               }`}
                           >
                             {child.name}
@@ -180,8 +198,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href!}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150
                   ${isActive
-                    ? "bg-violet-500/20 text-violet-300 font-medium shadow-sm"
-                    : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+                    ? "bg-cyan-500/20 text-cyan-300 font-medium shadow-sm"
+                    : "text-white/50 hover:text-white/80 hover:bg-white/5"
                   }`}
               >
                 <item.icon className="w-4 h-4 flex-shrink-0" />
@@ -192,10 +210,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* User footer */}
-        <div className="p-3 border-t border-white/[0.06] flex-shrink-0">
+        <div className="p-3 border-t border-white/10 flex-shrink-0">
           <div className={`flex items-center ${isSidebarOpen ? "gap-3" : "justify-center"}`}>
-            <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-violet-500/30">
-              <AvatarFallback className="text-xs font-bold" style={{ background: "oklch(0.65 0.22 290 / 25%)", color: "oklch(0.80 0.12 290)" }}>
+            <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-cyan-500/30">
+              <AvatarFallback className="text-xs font-bold" style={{ background: "oklch(0.70 0.16 200 / 25%)", color: "oklch(0.85 0.08 200)" }}>
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -213,8 +231,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 flex flex-col min-w-0">
 
         {/* Top bar */}
-        <header className="h-14 flex-shrink-0 flex items-center justify-between px-4 border-b border-white/[0.06]"
-          style={{ background: "oklch(0.13 0.018 264)" }}>
+        <header className="relative h-14 flex-shrink-0 flex items-center justify-between px-4 border-b border-white/10"
+          style={{ background: "rgba(13, 18, 34, 0.82)" }}>
 
           <button
             onClick={() => setSidebarOpen(!isSidebarOpen)}
@@ -222,6 +240,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <Menu className="w-4 h-4" />
           </button>
+
+          <div className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 items-center gap-2 text-sm font-bold tracking-tight text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 via-emerald-400 to-fuchsia-500 text-slate-950"><Sparkles className="h-4 w-4" /></div>
+            <span className="hidden sm:inline">SalesK</span>
+          </div>
 
           <div className="flex items-center gap-3">
             {/* Branch selector */}
@@ -236,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   }}
                   className="text-sm pl-8 pr-8 py-1.5 rounded-lg appearance-none cursor-pointer
                     border border-white/[0.08] bg-white/[0.05] text-white/70
-                    hover:border-white/[0.15] focus:outline-none focus:border-violet-500/50
+                    hover:border-white/[0.15] focus:outline-none focus:border-cyan-500/50
                     transition-colors"
                 >
                   {branches.map((b: any) => (

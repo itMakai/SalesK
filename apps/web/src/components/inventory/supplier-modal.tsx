@@ -88,9 +88,9 @@ export function SupplierModal({ isOpen, onClose, supplier, onSuccess }: Supplier
       setIsSubmitting(true)
       
       if (isEditing) {
-        await apiClient.patch(`/api/v1/suppliers/${supplier.id}`, values)
+        await apiClient.patch(`/suppliers/${supplier.id}`, values)
       } else {
-        await apiClient.post("/api/v1/suppliers", values)
+        await apiClient.post("/suppliers", values)
       }
       
       onSuccess()

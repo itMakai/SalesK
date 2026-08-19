@@ -42,7 +42,7 @@ export function TableModal({ isOpen, onClose, table, currentSection, branchId, o
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isEditing = !!table
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.input<typeof formSchema>, any, z.output<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -69,16 +69,16 @@ export function TableModal({ isOpen, onClose, table, currentSection, branchId, o
     }
   }, [isOpen, table, currentSection, form])
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.output<typeof formSchema>) => {
     if (!branchId) return
 
     try {
       setIsSubmitting(true)
       
       if (isEditing) {
-        await apiClient.patch(`/api/v1/tables/${table.id}`, values)
+        await apiClient.patch(`/tables/${table.id}`, values)
       } else {
-        await apiClient.post("/api/v1/tables", {
+        await apiClient.post("/tables", {
           branchId,
           ...values,
           posX: 0,
@@ -98,7 +98,7 @@ export function TableModal({ isOpen, onClose, table, currentSection, branchId, o
     if (!confirm("Are you sure you want to delete this table?")) return
     try {
       setIsSubmitting(true)
-      await apiClient.delete(`/api/v1/tables/${table.id}`)
+      await apiClient.delete(`/tables/${table.id}`)
       onSuccess()
     } catch (error) {
       console.error("Failed to delete table:", error)
@@ -142,7 +142,7 @@ export function TableModal({ isOpen, onClose, table, currentSection, branchId, o
                   <FormItem>
                     <FormLabel>Capacity (Seats)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="1" {...field} />
+                      <Input type="number" min="1" {...field} value={typeof field.value === "number" ? field.value : ""} onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

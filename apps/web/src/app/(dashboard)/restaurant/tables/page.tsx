@@ -23,7 +23,7 @@ export default function FloorPlanPage() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Derive unique sections
-  const sections = Array.from(new Set(tables?.map((t: any) => t.section || "Main Dining") || []))
+  const sections = Array.from(new Set<string>(tables?.map((t: any) => t.section || "Main Dining") || []))
   if (sections.length === 0) sections.push("Main Dining")
   
   // Ensure activeSection is valid
@@ -89,7 +89,7 @@ export default function FloorPlanPage() {
     const table = tables?.find((t: any) => t.id === tableId)
     if (table) {
       try {
-        await apiClient.patch(`/api/v1/tables/${table.id}`, {
+        await apiClient.patch(`/tables/${table.id}`, {
           posX: table.posX,
           posY: table.posY
         })
@@ -118,12 +118,12 @@ export default function FloorPlanPage() {
           </p>
         </div>
         <div className="flex items-center space-x-4">
-          <Select value={activeSection} onValueChange={setActiveSection}>
+          <Select value={activeSection} onValueChange={(value) => setActiveSection(value ?? "Main Dining")}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select Section" />
             </SelectTrigger>
             <SelectContent>
-              {sections.map(s => (
+              {sections.map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>

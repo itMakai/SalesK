@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import useSWR from "swr"
+import { apiClient } from "@/lib/api-client"
 import { useAuthStore } from "@/stores/auth-store"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,38 +15,16 @@ import {
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { InviteStaffModal } from "./components/invite-modal"
+import { EditStaffModal } from "./components/edit-staff-modal"
 
 export default function StaffSettingsPage() {
   const user = useAuthStore((state) => state.user)
   const [isInviteModalOpen, setInviteModalOpen] = useState(false)
+  const [editingMember, setEditingMember] = useState<any | null>(null)
   
-  // Mock data since we don't have a full GET /users endpoint in the backend for week 6
-  // In a real app we would fetch this via apiClient.get('/tenant/users')
-  const [staff, setStaff] = useState([
-    {
-      id: user?.id,
-      name: `${user?.firstName} ${user?.lastName}`,
-      email: user?.email,
-      role: user?.role,
-      branch: "All Branches",
-      status: "Active"
-    }
-  ])
+  const { data: staff = [], mutate } = useSWR("/api/v1/users", () => apiClient.get("/users").then((response) => response.data))
 
-  const handleInviteSuccess = () => {
-    // Mock adding to list
-    setStaff([
-      ...staff,
-      {
-        id: Math.random().toString(),
-        name: "New Invite",
-        email: "pending@example.com",
-        role: "cashier",
-        branch: "Pending",
-        status: "Invited"
-      }
-    ])
-  }
+  const handleInviteSuccess = () => mutate()
 
   return (
     <div className="space-y-6">
@@ -56,7 +36,7 @@ export default function StaffSettingsPage() {
           </p>
         </div>
         <Button onClick={() => setInviteModalOpen(true)}>
-          Invite Staff
+          Add Staff
         </Button>
       </div>
 
@@ -72,30 +52,30 @@ export default function StaffSettingsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {staff.map((member) => (
+            {staff.map((member: any) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback>{member.name[0]}</AvatarFallback>
+                    <AvatarFallback>{member.firstName?.[0] || "?"}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span>{member.name}</span>
+                      <span>{member.firstName} {member.lastName}</span>
                       <span className="text-xs text-muted-foreground">{member.email}</span>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="capitalize">{member.role}</TableCell>
-                <TableCell>{member.branch}</TableCell>
+                <TableCell>{member.staffAssignments?.length ? member.staffAssignments.map((assignment: any) => assignment.branch.name).join(", ") : "Unassigned"}</TableCell>
                 <TableCell>
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    member.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                    member.isActive ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {member.status}
+                  {member.isActive ? "Active" : "Inactive"}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm">Edit</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setEditingMember(member)}>Edit</Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -108,6 +88,7 @@ export default function StaffSettingsPage() {
         onOpenChange={setInviteModalOpen}
         onSuccess={handleInviteSuccess}
       />
+      <EditStaffModal member={editingMember} open={Boolean(editingMember)} onOpenChange={(open) => !open && setEditingMember(null)} onSuccess={() => mutate()} />
     </div>
   )
 }
