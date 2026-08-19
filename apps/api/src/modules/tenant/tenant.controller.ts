@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -20,11 +20,49 @@ export class TenantController {
 
   @Post('notifications')
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
-  async createOperationalNotification(@CurrentTenantId() tenantId: string, @Request() req: any, @Body() body: { type: string; message: string; branchId?: string }) {
+  async createOperationalNotification(@CurrentTenantId() tenantId: string, @Request() req: any, @Body() body: { type: string; message: string; branchId?: string; branchName?: string; cashierName?: string }) {
     const tenant = await this.tenantService.getTenant(tenantId);
     const settings = tenant.settings as Record<string, any>;
     const notifications = Array.isArray(settings.cashierNotifications) ? settings.cashierNotifications : [];
-    return this.tenantService.updateSettings(tenantId, { cashierNotifications: [{ type: body.type, message: body.message, branchId: body.branchId, createdBy: req.user.id, createdAt: new Date().toISOString() }, ...notifications].slice(0, 100) });
+    const newNotification = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+      type: body.type, 
+      message: body.message, 
+      branchId: body.branchId, 
+      branchName: body.branchName, 
+      cashierName: body.cashierName, 
+      createdBy: req.user.id, 
+      createdAt: new Date().toISOString(),
+      read: false,
+      responses: []
+    };
+    return this.tenantService.updateSettings(tenantId, { cashierNotifications: [newNotification, ...notifications].slice(0, 100) });
+  }
+
+  @Patch('notifications/:id/read')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  async markNotificationRead(@CurrentTenantId() tenantId: string, @Param('id') id: string) {
+    const tenant = await this.tenantService.getTenant(tenantId);
+    const settings = tenant.settings as Record<string, any>;
+    const notifications = Array.isArray(settings.cashierNotifications) ? settings.cashierNotifications : [];
+    const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+    return this.tenantService.updateSettings(tenantId, { cashierNotifications: updated });
+  }
+
+  @Post('notifications/:id/respond')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  async respondToNotification(@CurrentTenantId() tenantId: string, @Param('id') id: string, @Request() req: any, @Body() body: { message: string }) {
+    const tenant = await this.tenantService.getTenant(tenantId);
+    const settings = tenant.settings as Record<string, any>;
+    const notifications = Array.isArray(settings.cashierNotifications) ? settings.cashierNotifications : [];
+    const response = {
+      message: body.message,
+      createdBy: req.user.id,
+      authorName: `${req.user.firstName} ${req.user.lastName}`,
+      createdAt: new Date().toISOString()
+    };
+    const updated = notifications.map(n => n.id === id ? { ...n, read: true, responses: [...(n.responses || []), response] } : n);
+    return this.tenantService.updateSettings(tenantId, { cashierNotifications: updated });
   }
 
   @Patch()

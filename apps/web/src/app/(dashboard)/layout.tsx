@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api-client"
 import { useAuthStore } from "@/stores/auth-store"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { NotificationBell } from "@/components/dashboard/notification-bell"
 
 type NavChild = { name: string; href: string }
 type NavItem = {
@@ -247,6 +248,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBell />
+
             {/* Branch selector */}
             {branches.length > 0 && (
               <div className="relative">

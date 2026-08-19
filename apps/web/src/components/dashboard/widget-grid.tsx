@@ -16,6 +16,7 @@ import { BranchComparisonWidget } from "./widgets/branch-comparison";
 import { StaffPerformanceWidget } from "./widgets/staff-performance";
 import { CustomerInsightsWidget } from "./widgets/customer-insights";
 import { CustomKpisWidget } from "./widgets/custom-kpis";
+import { CashierNotificationsWidget } from "./widgets/cashier-notifications";
 import { Button } from "@/components/ui/button";
 import { GripHorizontal, X } from "lucide-react";
 
@@ -40,6 +41,7 @@ const WIDGET_COMPONENTS: Record<string, React.FC> = {
   "staff-performance": StaffPerformanceWidget,
   "customer-insights": CustomerInsightsWidget,
   "custom-kpis": CustomKpisWidget,
+  "cashier-notifications": CashierNotificationsWidget,
 };
 
 export function WidgetGrid({ isEditable }: WidgetGridProps) {
@@ -60,6 +62,7 @@ export function WidgetGrid({ isEditable }: WidgetGridProps) {
           setLayout([
             { i: "w-1", x: 0, y: 0, w: 3, h: 4 },
             { i: "w-2", x: 3, y: 0, w: 3, h: 4 },
+            { i: "w-12", x: 6, y: 0, w: 6, h: 4 },
             { i: "w-3", x: 0, y: 4, w: 8, h: 10 },
             { i: "w-4", x: 8, y: 4, w: 4, h: 10 },
             { i: "w-5", x: 0, y: 14, w: 6, h: 10 },
@@ -73,6 +76,7 @@ export function WidgetGrid({ isEditable }: WidgetGridProps) {
           setWidgets([
             { id: "w-1", type: "sales" },
             { id: "w-2", type: "custom-kpis" },
+            { id: "w-12", type: "cashier-notifications" },
             { id: "w-3", type: "revenue-chart" },
             { id: "w-4", type: "top-products" },
             { id: "w-5", type: "recent-orders" },
