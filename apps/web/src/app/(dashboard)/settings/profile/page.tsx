@@ -41,7 +41,7 @@ export default function ProfileSettingsPage() {
 
   const handleEnable2FA = async () => {
     try {
-      const res = await apiClient.post("/auth/2fa/enable")
+      const res = await apiClient.post("/auth/2fa/generate")
       // Normally we would show a QR code here based on res.data.qrCodeUrl
       alert("2FA Secret generated! In a real app, a QR code would appear here.")
     } catch (err) {

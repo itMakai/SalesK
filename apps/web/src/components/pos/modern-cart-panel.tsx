@@ -14,6 +14,7 @@ import {
   Printer,
   RotateCcw,
   ShieldAlert,
+  ShoppingCart,
   Sparkles,
   SplitSquareHorizontal,
   Ticket,
@@ -22,6 +23,8 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 import { useAuthStore } from "@/stores/auth-store";
 import { usePosStore } from "@/stores/pos-store";
@@ -147,6 +150,7 @@ export function ModernCartPanel() {
   const [paystackEmail, setPaystackEmail] = useState("");
 
   const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   useEffect(() => {
     apiClient.get("/branches")
@@ -201,6 +205,7 @@ export function ModernCartPanel() {
   const finishOrder = (order: any) => {
     setCompletedOrder(order);
     setReceiptOpen(true);
+    setIsMobileCartOpen(false);
     clearCart();
     setSelectedCustomerId(null);
     setSelectedTableId(null);
@@ -407,6 +412,7 @@ export function ModernCartPanel() {
       setTicketLabel("");
       setTicketNotes("");
       setTicketManagerOpen(true);
+      setIsMobileCartOpen(false);
       setStatusMessage({ type: "success", message: "Ticket suspended and ready for recall." });
     }
   };
@@ -530,7 +536,27 @@ export function ModernCartPanel() {
 
   return (
     <>
-      <aside className="sticky bottom-0 top-0 flex h-[58dvh] min-h-[420px] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-card/95 backdrop-blur-xl shadow-2xl shadow-cyan-500/5 lg:h-full lg:min-h-0 lg:w-[430px] lg:border-l lg:border-t-0" aria-label="Checkout and payment processing">
+      {/* Mobile Sticky Bar (Hidden on Desktop) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 pb-6 bg-slate-950/80 backdrop-blur-xl border-t border-white/10 z-40">
+        <Button onClick={() => setIsMobileCartOpen(true)} className="w-full h-14 bg-cyan-500 hover:bg-cyan-600 text-white rounded-2xl flex items-center justify-between px-6 shadow-xl shadow-cyan-500/20">
+          <span className="font-semibold flex items-center"><ShoppingCart className="mr-2 h-5 w-5" /> {cart.length} items</span>
+          <span className="font-bold text-lg">Ksh {total.toLocaleString()}</span>
+        </Button>
+      </div>
+
+      <aside className={cn(
+        "fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950 backdrop-blur-xl shadow-2xl shadow-cyan-500/5 transition-transform duration-300 ease-in-out",
+        isMobileCartOpen ? "translate-y-0" : "translate-y-full",
+        "lg:static lg:translate-y-0 lg:flex lg:h-full lg:min-h-0 lg:w-[430px] lg:shrink-0 lg:border-l lg:border-t-0 lg:bg-card/95"
+      )} aria-label="Checkout and payment processing">
+        {/* Mobile Close Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-white/10 bg-slate-900/50">
+          <h2 className="text-lg font-semibold text-white">Current Cart</h2>
+          <Button variant="ghost" size="icon" onClick={() => setIsMobileCartOpen(false)} className="text-slate-400 hover:text-white rounded-full">
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
+
         <div className="shrink-0 border-b border-white/10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-3 py-3 sm:px-4 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div>

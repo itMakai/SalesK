@@ -27,24 +27,6 @@ export class ProductController {
     return this.productService.findAll(categoryId);
   }
 
-  @Get(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(id);
-  }
-
-  @Patch(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productService.update(id, updateProductDto);
-  }
-
-  @Delete(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.productService.remove(id);
-  }
-
   @Post('import')
   @UseInterceptors(FileInterceptor('file'))
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
@@ -76,6 +58,24 @@ export class ProductController {
     return {
       url: `/uploads/${file.filename}`
     };
+  }
+
+  @Get(':id')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  findOne(@Param('id') id: string) {
+    return this.productService.findOne(id);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+    return this.productService.update(id, updateProductDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.productService.remove(id);
   }
 
   @Patch(':id/branch-pricing')

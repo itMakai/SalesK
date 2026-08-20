@@ -181,7 +181,7 @@ export default function PosPage() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-24 lg:pb-4">
           <ProductGrid products={products} />
         </div>
       </div>

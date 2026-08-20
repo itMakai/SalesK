@@ -91,29 +91,29 @@ export default function InventoryPage() {
   );
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
+    <div className="flex-1 space-y-4 p-4 sm:p-6 sm:pt-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Inventory</h2>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between py-4 bg-card p-4 rounded-lg border">
-        <div className="flex items-center space-x-4 flex-1">
-          <div className="relative w-72">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between py-4 bg-card p-4 rounded-lg border">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 w-full md:w-auto">
+          <div className="relative w-full sm:w-72">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products or SKU..."
-              className="pl-8"
+              className="pl-8 w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <Select value={branchFilter} onValueChange={(value) => setBranchFilter(value ?? "all")}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="All Branches" />
             </SelectTrigger>
             <SelectContent>
@@ -134,7 +134,7 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="hidden md:block rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -156,12 +156,16 @@ export default function InventoryPage() {
                 <TableCell colSpan={6} className="h-24 text-center">No inventory records found.</TableCell>
               </TableRow>
             ) : (
-              filteredInventory.map((item) => {
+              filteredInventory.map((item, index) => {
                 const isLowStock = item.lowStockThreshold !== null && Number(item.quantity) <= Number(item.lowStockThreshold);
                 const isOutOfStock = Number(item.quantity) <= 0;
                 
                 return (
-                  <TableRow key={item.id} className={isLowStock && !isOutOfStock ? "bg-red-50/50 dark:bg-red-950/20" : isOutOfStock ? "bg-red-100/50 dark:bg-red-900/20" : ""}>
+                  <TableRow 
+                    key={item.id} 
+                    className={`${isLowStock && !isOutOfStock ? "bg-red-50/50 dark:bg-red-950/20" : isOutOfStock ? "bg-red-100/50 dark:bg-red-900/20" : ""} animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both`}
+                    style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+                  >
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{item.product.name}</span>
@@ -224,6 +228,70 @@ export default function InventoryPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="md:hidden space-y-4">
+        {isLoading ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">Loading inventory...</div>
+        ) : filteredInventory.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">No inventory records found.</div>
+        ) : (
+          filteredInventory.map((item, index) => {
+            const isLowStock = item.lowStockThreshold !== null && Number(item.quantity) <= Number(item.lowStockThreshold);
+            const isOutOfStock = Number(item.quantity) <= 0;
+            const bgClass = isOutOfStock ? "bg-red-500/5 border-red-500/20" : isLowStock ? "bg-orange-500/5 border-orange-500/20" : "bg-card border-white/10";
+            
+            return (
+              <div 
+                key={item.id} 
+                className={`rounded-lg border p-4 shadow-sm flex flex-col space-y-3 ${bgClass} animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both`}
+                style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-semibold text-lg">{item.product.name}</div>
+                    <div className="text-sm text-muted-foreground">{item.product.sku || "No SKU"} • {item.branch.name}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-cyan-600 dark:text-cyan-400 text-lg">
+                      {Number(item.quantity)} <span className="text-xs font-normal text-muted-foreground">{item.product.unit}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                  <div>
+                    {isOutOfStock ? (
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
+                        Out of Stock
+                      </span>
+                    ) : isLowStock ? (
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
+                        <AlertCircle className="w-3 h-3 mr-1" /> Low Stock
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                        In Stock
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => { setSelectedItem(item); setAdjustmentModalOpen(true); }}>
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => { setSelectedItem(item); setThresholdModalOpen(true); }}>
+                      <Settings2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => { setSelectedItem(item); setHistoryDrawerOpen(true); }}>
+                      <History className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <StockAdjustmentModal

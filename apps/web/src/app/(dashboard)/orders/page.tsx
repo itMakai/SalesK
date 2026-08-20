@@ -73,7 +73,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <div className="border rounded-md">
+      <div className="hidden md:block border rounded-md">
         <Table>
           <TableHeader>
             <TableRow>
@@ -100,8 +100,12 @@ export default function OrdersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredOrders.map((order) => (
-                <TableRow key={order.id}>
+              filteredOrders.map((order, index) => (
+                <TableRow 
+                  key={order.id}
+                  className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+                  style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+                >
                   <TableCell className="font-medium">
                     {order.orderNumber}
                   </TableCell>
@@ -147,6 +151,61 @@ export default function OrdersPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="md:hidden space-y-4">
+        {loading ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">
+            Loading orders...
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">
+            No orders found.
+          </div>
+        ) : (
+          filteredOrders.map((order, index) => (
+            <div 
+              key={order.id} 
+              className="bg-card border rounded-lg p-4 shadow-sm flex flex-col space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+              style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-semibold text-lg text-white/90">{order.orderNumber}</div>
+                  <div className="text-sm text-muted-foreground">{format(new Date(order.createdAt), "MMM d, yyyy HH:mm")}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-cyan-500">Ksh {Number(order.total).toLocaleString()}</div>
+                  <Badge
+                    variant={
+                      order.status === "completed" ? "default" : order.status === "cancelled" ? "destructive" : "secondary"
+                    }
+                    className="capitalize mt-1"
+                  >
+                    {order.status}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between border-t border-white/5 pt-3 mt-1">
+                <div className="flex flex-col gap-1 text-sm text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Cashier:</span> {order.cashier?.firstName} {order.cashier?.lastName}
+                  </span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {order.payments?.map((p: any) => (
+                      <Badge key={p.id} variant="outline" className="uppercase text-[10px] py-0 h-4">{p.method}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="h-8">
+                  <Eye className="w-3.5 h-3.5 mr-1" /> View
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

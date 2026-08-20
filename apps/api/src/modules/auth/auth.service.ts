@@ -240,8 +240,12 @@ export class AuthService {
     if (!user) throw new UnauthorizedException();
 
     const otplib = require('otplib');
-    const secret = otplib.authenticator.generateSecret();
-    const otpauthUrl = otplib.authenticator.keyuri(user.email, user.tenant.name || 'SalesK', secret);
+    const secret = otplib.generateSecret();
+    const otpauthUrl = otplib.generateURI({
+      issuer: user.tenant.name || 'SalesK',
+      label: user.email,
+      secret,
+    });
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -264,12 +268,12 @@ export class AuthService {
     }
 
     const otplib = require('otplib');
-    const isValid = otplib.authenticator.verify({
+    const result = otplib.verifySync({
       token: code,
       secret: user.twoFactorSecret,
     });
 
-    if (isValid) {
+    if (result.valid) {
       await this.prisma.user.update({
         where: { id: user.id },
         data: { twoFactorEnabled: true },

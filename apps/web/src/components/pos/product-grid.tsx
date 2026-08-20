@@ -66,7 +66,7 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-      {filteredProducts.map((product) => (
+      {filteredProducts.map((product, index) => (
         <button
           key={product.id}
           onClick={() =>
@@ -78,7 +78,8 @@ export function ProductGrid({ products }: ProductGridProps) {
               taxRate: product.taxRate,
             })
           }
-          className="group flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-card/80 text-left shadow-lg shadow-cyan-500/5 transition-all duration-200 hover:-translate-y-1 hover:border-cyan-400/30 hover:shadow-cyan-500/10"
+          className="group flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-card/80 text-left shadow-lg shadow-cyan-500/5 transition-all duration-200 hover:-translate-y-1 hover:border-cyan-400/30 hover:shadow-cyan-500/10 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+          style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
         >
           <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
             {product.image ? (

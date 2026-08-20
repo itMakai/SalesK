@@ -122,36 +122,30 @@ export class ProductService {
 
   async bulkImport(fileBuffer: Buffer) {
     const products: any[] = [];
-    return new Promise((resolve, reject) => {
-      Readable.from(fileBuffer)
-        .pipe(csv())
-        .on('data', (data: any) => products.push(data))
-        .on('end', async () => {
-          try {
-            let importedCount = 0;
-            // Simple sequential import (could be optimized with createMany if no nested relations)
-            for (const item of products) {
-              await this.prisma.extended.product.create({
-                data: {
-                  name: item.name,
-                  sku: item.sku || undefined,
-                  barcode: item.barcode || undefined,
-                  description: item.description || undefined,
-                  basePrice: parseFloat(item.basePrice) || 0,
-                  costPrice: item.costPrice ? parseFloat(item.costPrice) : undefined,
-                  trackInventory: item.trackInventory === 'true' || item.trackInventory === '1',
-                  isActive: item.isActive !== 'false' && item.isActive !== '0',
-                } as any,
-              });
-              importedCount++;
-            }
-            resolve({ success: true, count: importedCount });
-          } catch (error) {
-            reject(error);
-          }
-        })
-        .on('error', (error: any) => reject(error));
-    });
+    const stream = Readable.from(fileBuffer).pipe(csv());
+
+    for await (const data of stream) {
+      products.push(data);
+    }
+
+    let importedCount = 0;
+    for (const item of products) {
+      await this.prisma.extended.product.create({
+        data: {
+          name: item.name,
+          sku: item.sku || undefined,
+          barcode: item.barcode || undefined,
+          description: item.description || undefined,
+          basePrice: parseFloat(item.basePrice) || 0,
+          costPrice: item.costPrice ? parseFloat(item.costPrice) : undefined,
+          trackInventory: item.trackInventory === 'true' || item.trackInventory === '1',
+          isActive: item.isActive !== 'false' && item.isActive !== '0',
+        } as any,
+      });
+      importedCount++;
+    }
+
+    return { success: true, count: importedCount };
   }
 
   async exportCatalog() {

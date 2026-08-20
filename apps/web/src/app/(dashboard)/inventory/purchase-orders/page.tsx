@@ -80,7 +80,7 @@ export default function PurchaseOrdersPage() {
         </div>
       </div>
 
-      <div className="border rounded-md">
+      <div className="hidden md:block border rounded-md">
         <Table>
           <TableHeader>
             <TableRow>
@@ -104,8 +104,12 @@ export default function PurchaseOrdersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPOs.map((po: any) => (
-                <TableRow key={po.id}>
+              filteredPOs.map((po: any, index: number) => (
+                <TableRow 
+                  key={po.id}
+                  className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+                  style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+                >
                   <TableCell className="font-medium">
                     {po.orderNumber}
                     <div className="text-xs text-muted-foreground mt-1">
@@ -147,6 +151,59 @@ export default function PurchaseOrdersPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="md:hidden space-y-4">
+        {isLoading ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">Loading...</div>
+        ) : filteredPOs.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">No purchase orders found.</div>
+        ) : (
+          filteredPOs.map((po: any, index: number) => (
+            <div 
+              key={po.id} 
+              className="bg-card border rounded-lg p-4 shadow-sm flex flex-col space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+              style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-semibold text-lg">{po.orderNumber}</div>
+                  <div className="text-sm text-muted-foreground">{format(new Date(po.createdAt), 'MMM d, yyyy')}</div>
+                </div>
+                {getStatusBadge(po.status)}
+              </div>
+              
+              <div className="border-t border-white/5 pt-3 space-y-2">
+                <div className="flex items-center text-sm text-slate-300">
+                  <span className="font-medium mr-2">Supplier:</span> {po.supplier?.name}
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                    {po.expectedDate ? format(new Date(po.expectedDate), 'MMM d, yyyy') : '-'}
+                  </div>
+                  <div className="font-bold text-cyan-600 dark:text-cyan-400">
+                    <DollarSign className="w-3 h-3 inline-block" />{po.totalAmount}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-white/5 pt-3">
+                {po.status === 'draft' && (
+                  <Button variant="outline" size="sm" onClick={() => updateStatus(po.id, 'ordered')}>
+                    Mark Ordered
+                  </Button>
+                )}
+                {po.status === 'ordered' && (
+                  <Button variant="default" size="sm" onClick={() => updateStatus(po.id, 'received')} className="bg-green-600 hover:bg-green-700">
+                    <Package className="w-3 h-3 mr-2" /> Receive Stock
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <PurchaseOrderModal 

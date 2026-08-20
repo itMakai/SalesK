@@ -125,22 +125,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="h-[100dvh] overflow-hidden flex bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(236,72,153,0.14),_transparent_22%),linear-gradient(180deg,_rgba(10,14,30,1)_0%,_rgba(11,15,28,1)_100%)]">
 
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm sm:hidden transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ─────────────────────────────────────────────── */}
       <aside
         className={`flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out border-r border-white/10 backdrop-blur-xl
-          ${isSidebarOpen ? "fixed inset-y-0 left-0 z-50 w-60 shadow-2xl sm:static sm:shadow-none" : "hidden sm:flex sm:w-[72px]"}`}
+          ${isSidebarOpen ? "fixed inset-y-0 left-0 z-50 w-64 shadow-2xl sm:static sm:w-60 sm:shadow-none" : "hidden sm:flex sm:w-[72px]"}`}
         style={{ background: "rgba(11, 15, 28, 0.82)" }}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-white/10 flex-shrink-0">
+        <div className="h-14 sm:h-16 flex items-center justify-between px-4 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/15 text-cyan-300 shadow-lg shadow-cyan-500/10">
-              <Building2 className="h-5 w-5" />
+            <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl sm:rounded-2xl bg-cyan-500/15 text-cyan-300 shadow-lg shadow-cyan-500/10">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             {isSidebarOpen && (
-              <span className="truncate font-bold text-lg tracking-tight text-white select-none">{tenant?.name || "Your Business"}</span>
+              <span className="truncate font-bold text-base sm:text-lg tracking-tight text-white select-none">{tenant?.name || "Your Business"}</span>
             )}
           </div>
+          {isSidebarOpen && (
+            <button 
+              onClick={() => setSidebarOpen(false)} 
+              className="sm:hidden p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         {/* Nav */}
@@ -197,6 +213,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href!}
+                onClick={() => {
+                  // Close sidebar on mobile when navigating
+                  if (window.innerWidth < 640) setSidebarOpen(false)
+                }}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150
                   ${isActive
                     ? "bg-cyan-500/20 text-cyan-300 font-medium shadow-sm"

@@ -81,7 +81,7 @@ export default function StockTransfersPage() {
         </div>
       </div>
 
-      <div className="border rounded-md">
+      <div className="hidden md:block border rounded-md">
         <Table>
           <TableHeader>
             <TableRow>
@@ -104,12 +104,16 @@ export default function StockTransfersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredTransfers.map((t: any) => {
+              filteredTransfers.map((t: any, index: number) => {
                 const isSource = t.fromBranchId === currentBranch?.id;
                 const isDest = t.toBranchId === currentBranch?.id;
 
                 return (
-                  <TableRow key={t.id}>
+                  <TableRow 
+                    key={t.id}
+                    className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+                    style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+                  >
                     <TableCell className="font-medium">
                       {t.transferNumber}
                       <div className="text-xs text-muted-foreground mt-1">
@@ -147,6 +151,58 @@ export default function StockTransfersPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="md:hidden space-y-4">
+        {isLoading ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">Loading...</div>
+        ) : filteredTransfers.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">No stock transfers found.</div>
+        ) : (
+          filteredTransfers.map((t: any, index: number) => {
+            const isSource = t.fromBranchId === currentBranch?.id;
+            const isDest = t.toBranchId === currentBranch?.id;
+
+            return (
+              <div 
+                key={t.id} 
+                className="bg-card border rounded-lg p-4 shadow-sm flex flex-col space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+                style={{ animationDelay: `${Math.min(index * 50, 1000)}ms` }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-semibold text-lg">{t.transferNumber}</div>
+                    <div className="text-sm text-muted-foreground">{format(new Date(t.createdAt), 'MMM d, yyyy')}</div>
+                  </div>
+                  {getStatusBadge(t.status)}
+                </div>
+                
+                <div className="flex items-center space-x-2 text-sm bg-muted/30 p-2 rounded-md">
+                  <span className={`${isSource ? 'font-bold' : ''}`}>{t.fromBranch?.name}</span>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                  <span className={`${isDest ? 'font-bold' : ''}`}>{t.toBranch?.name}</span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                  <div className="text-sm text-muted-foreground">{t.items?.length || 0} items</div>
+                  <div>
+                    {t.status === 'pending' && isSource && (
+                      <Button variant="outline" size="sm" onClick={() => updateStatus(t.id, 'shipped')}>
+                        <Truck className="w-3 h-3 mr-2" /> Ship Items
+                      </Button>
+                    )}
+                    {t.status === 'shipped' && isDest && (
+                      <Button variant="default" size="sm" onClick={() => updateStatus(t.id, 'received')} className="bg-green-600 hover:bg-green-700">
+                        Receive Items
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
       </div>
 
       <TransferModal 

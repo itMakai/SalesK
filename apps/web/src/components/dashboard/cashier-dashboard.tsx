@@ -71,7 +71,7 @@ export function CashierDashboard() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Top Products Chart */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '100ms' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -102,7 +102,7 @@ export function CashierDashboard() {
         </Card>
 
         {/* Payment Breakdown Chart */}
-        <Card>
+        <Card className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '200ms' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
@@ -141,7 +141,7 @@ export function CashierDashboard() {
         </Card>
 
         {/* Recent Orders List */}
-        <Card>
+        <Card className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '300ms' }}>
           <CardHeader>
             <CardTitle>Recent Orders</CardTitle>
           </CardHeader>
@@ -162,7 +162,7 @@ export function CashierDashboard() {
         </Card>
 
         {/* Top Spenders & Insights */}
-        <Card>
+        <Card className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '400ms' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-4 w-4 text-cyan-400" />
@@ -194,7 +194,7 @@ export function CashierDashboard() {
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card>
+        <Card className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '500ms' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-400">
               <AlertTriangle className="h-4 w-4" />
@@ -223,7 +223,7 @@ export function CashierDashboard() {
         </Card>
       </div>
 
-      <Card className="border-indigo-500/20 bg-indigo-500/5 overflow-hidden relative">
+      <Card className="border-indigo-500/20 bg-indigo-500/5 overflow-hidden relative animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '600ms' }}>
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-indigo-400">
@@ -258,7 +258,7 @@ export function CashierDashboard() {
       </Card>
 
       {myResponses.length > 0 && (
-        <Card className="border-cyan-500/20 bg-cyan-500/5 overflow-hidden relative">
+        <Card className="border-cyan-500/20 bg-cyan-500/5 overflow-hidden relative animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '700ms' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-cyan-400">
               <MessageSquare className="h-4 w-4" />
