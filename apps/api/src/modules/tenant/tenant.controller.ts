@@ -6,21 +6,43 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentTenantId } from '../../common/decorators/current-tenant.decorator';
 import { UserRole } from '@salesk/shared';
+import { NotificationGateway } from './notification.gateway';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('tenant')
 export class TenantController {
-  constructor(private readonly tenantService: TenantService) {}
+  constructor(private readonly tenantService: TenantService, private readonly notificationGateway: NotificationGateway) {}
+
+  private visibleNotifications(notifications: any[], user: any, branchId?: string) {
+    if (user.role !== UserRole.CASHIER) return branchId ? notifications.filter(n => !n.branchId || n.branchId === branchId) : notifications;
+    return notifications.filter(n =>
+      n.recipientUserId === user.id ||
+      (n.createdBy === user.id && (!branchId || n.branchId === branchId))
+    );
+  }
 
   @Get()
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
-  getTenant(@CurrentTenantId() tenantId: string) {
-    return this.tenantService.getTenant(tenantId);
+  async getTenant(@CurrentTenantId() tenantId: string, @Request() req: any) {
+    const tenant = await this.tenantService.getTenant(tenantId);
+    if (req.user.role === UserRole.CASHIER) {
+      const settings = tenant.settings as Record<string, any>;
+      return { ...tenant, settings: { ...settings, cashierNotifications: this.visibleNotifications(settings.cashierNotifications || [], req.user) } };
+    }
+    return tenant;
+  }
+
+  @Get('notifications')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  async getNotifications(@CurrentTenantId() tenantId: string, @Request() req: any, @Param() _params: any) {
+    const tenant = await this.tenantService.getTenant(tenantId);
+    const notifications = Array.isArray((tenant.settings as any).cashierNotifications) ? (tenant.settings as any).cashierNotifications : [];
+    return this.visibleNotifications(notifications, req.user, req.query.branchId);
   }
 
   @Post('notifications')
   @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
-  async createOperationalNotification(@CurrentTenantId() tenantId: string, @Request() req: any, @Body() body: { type: string; message: string; branchId?: string; branchName?: string; cashierName?: string }) {
+  async createOperationalNotification(@CurrentTenantId() tenantId: string, @Request() req: any, @Body() body: { type: string; message: string; branchId?: string; branchName?: string; cashierName?: string; recipientUserId?: string }) {
     const tenant = await this.tenantService.getTenant(tenantId);
     const settings = tenant.settings as Record<string, any>;
     const notifications = Array.isArray(settings.cashierNotifications) ? settings.cashierNotifications : [];
@@ -31,38 +53,49 @@ export class TenantController {
       branchId: body.branchId, 
       branchName: body.branchName, 
       cashierName: body.cashierName, 
+      recipientUserId: body.recipientUserId,
       createdBy: req.user.id, 
       createdAt: new Date().toISOString(),
-      read: false,
+      readBy: { [req.user.id]: true },
       responses: []
     };
-    return this.tenantService.updateSettings(tenantId, { cashierNotifications: [newNotification, ...notifications].slice(0, 100) });
+    const result = await this.tenantService.updateSettings(tenantId, { cashierNotifications: [newNotification, ...notifications].slice(0, 100) });
+    this.notificationGateway.publish(tenantId);
+    return result;
   }
 
   @Patch('notifications/:id/read')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
-  async markNotificationRead(@CurrentTenantId() tenantId: string, @Param('id') id: string) {
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
+  async markNotificationRead(@CurrentTenantId() tenantId: string, @Param('id') id: string, @Request() req: any) {
     const tenant = await this.tenantService.getTenant(tenantId);
     const settings = tenant.settings as Record<string, any>;
     const notifications = Array.isArray(settings.cashierNotifications) ? settings.cashierNotifications : [];
-    const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    return this.tenantService.updateSettings(tenantId, { cashierNotifications: updated });
+    const notification = notifications.find(n => n.id === id);
+    if (!notification || !this.visibleNotifications([notification], req.user).length) return { settings };
+    const updated = notifications.map(n => n.id === id ? { ...n, readBy: { ...(n.readBy || {}), [req.user.id]: true } } : n);
+    const result = await this.tenantService.updateSettings(tenantId, { cashierNotifications: updated });
+    this.notificationGateway.publish(tenantId);
+    return result;
   }
 
   @Post('notifications/:id/respond')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async respondToNotification(@CurrentTenantId() tenantId: string, @Param('id') id: string, @Request() req: any, @Body() body: { message: string }) {
     const tenant = await this.tenantService.getTenant(tenantId);
     const settings = tenant.settings as Record<string, any>;
     const notifications = Array.isArray(settings.cashierNotifications) ? settings.cashierNotifications : [];
+    const original = notifications.find(n => n.id === id);
+    if (!original || !this.visibleNotifications([original], req.user).length) return { settings };
     const response = {
       message: body.message,
       createdBy: req.user.id,
       authorName: `${req.user.firstName} ${req.user.lastName}`,
       createdAt: new Date().toISOString()
     };
-    const updated = notifications.map(n => n.id === id ? { ...n, read: true, responses: [...(n.responses || []), response] } : n);
-    return this.tenantService.updateSettings(tenantId, { cashierNotifications: updated });
+    const updated = notifications.map(n => n.id === id ? { ...n, readBy: { ...(n.readBy || {}), [req.user.id]: true, [n.createdBy]: false }, responses: [...(n.responses || []), response] } : n);
+    const result = await this.tenantService.updateSettings(tenantId, { cashierNotifications: updated });
+    this.notificationGateway.publish(tenantId);
+    return result;
   }
 
   @Patch()

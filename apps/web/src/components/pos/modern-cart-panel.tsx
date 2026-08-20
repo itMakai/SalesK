@@ -530,13 +530,13 @@ export function ModernCartPanel() {
 
   return (
     <>
-      <aside className="sticky top-0 flex h-full min-h-0 w-[430px] shrink-0 flex-col overflow-hidden border-l border-white/10 bg-card/80 backdrop-blur-xl shadow-2xl shadow-cyan-500/5" aria-label="Checkout and payment processing">
-        <div className="shrink-0 border-b border-white/10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-4 py-4">
+      <aside className="sticky bottom-0 top-0 flex h-[58dvh] min-h-[420px] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-card/95 backdrop-blur-xl shadow-2xl shadow-cyan-500/5 lg:h-full lg:min-h-0 lg:w-[430px] lg:border-l lg:border-t-0" aria-label="Checkout and payment processing">
+        <div className="shrink-0 border-b border-white/10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-3 py-3 sm:px-4 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">Current Order</p>
-              <h2 className="mt-1 text-xl font-semibold text-white">Fast checkout</h2>
-              <p className="text-sm text-slate-300">Hold, resume, refund, and reconcile without leaving the terminal.</p>
+              <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">Fast checkout</h2>
+              <p className="hidden text-sm text-slate-300 sm:block">Hold, resume, refund, and reconcile without leaving the terminal.</p>
             </div>
             <Button variant="ghost" size="icon" onClick={clearCart} disabled={cart.length === 0}>
               <Trash2 className="h-4 w-4" />
@@ -577,7 +577,7 @@ export function ModernCartPanel() {
           )}
         </div>
 
-        <div className="border-b border-white/10 px-4 py-4">
+        <div className="shrink-0 border-b border-white/10 px-3 py-3 sm:px-4 sm:py-4">
           <div className="grid gap-3">
             <Select value={selectedCustomerId || "walk-in"} onValueChange={(value) => setSelectedCustomerId(value === "walk-in" ? null : value)}>
               <SelectTrigger className="rounded-2xl border-white/10 bg-white/5">
@@ -642,7 +642,7 @@ export function ModernCartPanel() {
           </div>
         </div>
 
-        <ScrollArea className="min-h-0 flex-1 overscroll-contain px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-gutter:stable] sm:px-4 sm:py-4" tabIndex={0} aria-label="Cart items">
           {cart.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/10 bg-white/5 py-16 text-center text-slate-300">
               <ShieldAlert className="h-12 w-12 text-cyan-300/70" />
@@ -686,9 +686,9 @@ export function ModernCartPanel() {
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
-        <div className="shrink-0 border-t border-white/10 bg-slate-950/70 px-4 py-4">
+        <div className="shrink-0 border-t border-white/10 bg-slate-950/70 px-3 py-3 sm:px-4 sm:py-4">
           <div className="space-y-2 rounded-3xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200">
             <div className="flex items-center justify-between text-slate-400">
               <span>Subtotal</span>

@@ -122,14 +122,14 @@ export default function PosPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
       <BarcodeListener products={products} />
       
       {/* Left side: Search, Filters, Grid */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-transparent">
+      <div className="flex min-h-[55dvh] min-w-0 flex-1 flex-col bg-transparent lg:min-h-0">
         <div className="border-b border-white/10 bg-card/60 px-4 py-4 backdrop-blur-xl">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex flex-1 min-w-[280px] items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 shadow-lg shadow-cyan-500/5">
+            <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 shadow-lg shadow-cyan-500/5 sm:min-w-[280px]">
               <Search className="h-4 w-4 text-cyan-300" />
               <Input
                 placeholder="Search products by name, SKU, or barcode..."

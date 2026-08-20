@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import useSWR from "swr"
 import { Bell, Package, MessageSquare, CheckCircle2, Send } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { useAuthStore } from "@/stores/auth-store"
+import { useNotifications } from "@/hooks/use-notifications"
 import { formatDistanceToNow } from "date-fns"
 import {
   DropdownMenu,
@@ -24,21 +24,11 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function NotificationBell() {
   const user = useAuthStore(s => s.user)
+  const userId = user?.id ?? ""
   const isCashier = user?.role === "cashier"
 
-  const { data: tenant, mutate } = useSWR("/tenant", () => apiClient.get("/tenant").then(res => res.data), { refreshInterval: 15000 })
-  
-  const allNotifications = tenant?.settings?.cashierNotifications || []
-  
-  // Cashiers only see their own notifications. Others see all.
-  const notifications = isCashier 
-    ? allNotifications.filter((n: any) => n.createdBy === user?.id)
-    : allNotifications;
-
-  // Unread logic: for cashiers, maybe we just don't show the red dot unless we add a flag, but for now we'll just check if there are responses
-  const unread = isCashier
-    ? notifications.filter((n: any) => n.responses?.length > 0) // Simplified unread for cashiers
-    : notifications.filter((n: any) => !n.read)
+  const { notifications, mutate } = useNotifications()
+  const unread = notifications.filter((n: any) => !n.readBy?.[userId])
 
   const [selectedNotif, setSelectedNotif] = useState<any | null>(null)
   const [responseMsg, setResponseMsg] = useState("")
@@ -66,8 +56,7 @@ export function NotificationBell() {
       setResponseMsg("");
       mutate();
       // Re-fetch local state if dialog stays open
-      const freshData = await apiClient.get("/tenant").then(res => res.data);
-      const updatedNotifs = freshData?.settings?.cashierNotifications || [];
+      const updatedNotifs = await apiClient.get("/tenant/notifications").then(res => res.data);
       const updatedSelected = updatedNotifs.find((n: any) => n.id === selectedNotif.id);
       if (updatedSelected) setSelectedNotif(updatedSelected);
     } catch (e) {
@@ -79,7 +68,7 @@ export function NotificationBell() {
 
   const handleNotificationClick = (n: any) => {
     setSelectedNotif(n);
-    if (!n.read && !isCashier) {
+    if (!n.readBy?.[userId]) {
       markAsRead(n.id);
     }
   }
@@ -90,16 +79,15 @@ export function NotificationBell() {
         <DropdownMenuTrigger className="relative p-2 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-all focus:outline-none">
           <Bell className="w-4 h-4" />
           {unread.length > 0 && (
-            <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            <span className="absolute -right-1 -top-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-[#0f1117]" aria-label={`${unread.length} unread notifications`}>
+              {unread.length > 99 ? "99+" : unread.length}
             </span>
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-80 bg-[#0f1117] border-white/10 text-white p-0">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
             <p className="text-sm font-semibold">Notifications</p>
-            {unread.length > 0 && !isCashier && (
+            {unread.length > 0 && (
               <button onClick={markAllAsRead} className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
                 Mark all as read
               </button>
@@ -111,7 +99,7 @@ export function NotificationBell() {
                 <div 
                   key={n.id || n.createdAt} 
                   onClick={() => handleNotificationClick(n)}
-                  className={`flex gap-3 px-4 py-3 border-b border-white/5 cursor-pointer transition-colors ${!n.read && !isCashier ? 'bg-cyan-500/5 hover:bg-cyan-500/10' : 'hover:bg-white/[0.04]'}`}
+                  className={`flex gap-3 px-4 py-3 border-b border-white/5 cursor-pointer transition-colors ${!n.readBy?.[userId] ? 'bg-cyan-500/5 hover:bg-cyan-500/10' : 'hover:bg-white/[0.04]'}`}
                 >
                   <div className="mt-0.5">
                     {n.type === "low_stock" ? (
@@ -137,7 +125,7 @@ export function NotificationBell() {
                       )}
                     </div>
                   </div>
-                  {!n.read && n.id && !isCashier && (
+                  {!n.readBy?.[userId] && n.id && (
                     <button onClick={(e) => markAsRead(n.id, e)} className="self-center p-1 text-white/30 hover:text-cyan-400 transition-colors" title="Mark as read">
                       <CheckCircle2 className="h-4 w-4" />
                     </button>

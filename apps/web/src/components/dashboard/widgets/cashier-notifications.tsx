@@ -1,21 +1,23 @@
 "use client"
 
 import { useState } from "react";
-import useSWR from "swr";
 import { apiClient } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BellRing, Package, MessageSquare, Reply, Send, CheckCircle2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useNotifications } from "@/hooks/use-notifications";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function CashierNotificationsWidget() {
-  const { data: tenant, mutate } = useSWR("/tenant", () => apiClient.get("/tenant").then((res) => res.data), { refreshInterval: 15000 });
+  const user = useAuthStore(s => s.user);
+  const userId = user?.id ?? "";
+  const { notifications, mutate } = useNotifications();
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [responseMsg, setResponseMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const notifications = tenant?.settings?.cashierNotifications || [];
 
   const handleRespond = async (id: string) => {
     if (!responseMsg.trim()) return;
@@ -50,28 +52,28 @@ export function CashierNotificationsWidget() {
         {notifications.length > 0 ? (
           <div className="space-y-3">
             {notifications.slice(0, 10).map((notif: any, i: number) => (
-              <div key={notif.id || i} className={`flex gap-3 p-3 rounded-lg border transition-colors ${!notif.read ? 'border-cyan-500/30 bg-cyan-500/5' : 'border-white/5 bg-white/[0.02]'}`}>
+              <div key={notif.id || i} className={`flex gap-3 p-3 rounded-lg border transition-colors ${!notif.readBy?.[userId] ? 'border-cyan-500/30 bg-cyan-500/5' : 'border-white/5 bg-white/[0.02]'}`}>
                 <div className="mt-0.5">
                   {notif.type === "low_stock" ? (
-                    <div className={`rounded-full p-1.5 ${!notif.read ? 'bg-amber-500/20 text-amber-500' : 'bg-white/5 text-white/40'}`}>
+                    <div className={`rounded-full p-1.5 ${!notif.readBy?.[userId] ? 'bg-amber-500/20 text-amber-500' : 'bg-white/5 text-white/40'}`}>
                       <Package className="h-4 w-4" />
                     </div>
                   ) : (
-                    <div className={`rounded-full p-1.5 ${!notif.read ? 'bg-blue-500/20 text-blue-500' : 'bg-white/5 text-white/40'}`}>
+                    <div className={`rounded-full p-1.5 ${!notif.readBy?.[userId] ? 'bg-blue-500/20 text-blue-500' : 'bg-white/5 text-white/40'}`}>
                       <MessageSquare className="h-4 w-4" />
                     </div>
                   )}
                 </div>
                 <div className="flex-1 space-y-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className={`text-sm font-medium leading-none ${!notif.read ? 'text-white' : 'text-white/70'}`}>
+                    <p className={`text-sm font-medium leading-none ${!notif.readBy?.[userId] ? 'text-white' : 'text-white/70'}`}>
                       {notif.cashierName || "Cashier"} <span className="font-normal text-muted-foreground">at {notif.branchName || "Branch"}</span>
                     </p>
                     <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                       {notif.createdAt ? formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true }) : "recently"}
                     </span>
                   </div>
-                  <p className={`text-sm mt-1 ${!notif.read ? 'text-white/90' : 'text-white/50'}`}>
+                  <p className={`text-sm mt-1 ${!notif.readBy?.[userId] ? 'text-white/90' : 'text-white/50'}`}>
                     {notif.message}
                   </p>
                   
@@ -93,7 +95,7 @@ export function CashierNotificationsWidget() {
                         Reply
                       </Button>
                     )}
-                    {!notif.read && notif.id && (
+                    {!notif.readBy?.[userId] && notif.id && (
                       <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10" onClick={() => markAsRead(notif.id)}>
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Mark Read

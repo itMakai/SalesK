@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { AlertTriangle, BellRing, CreditCard, Package, Send, Users, TrendingUp, MessageSquare } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { useAuthStore } from "@/stores/auth-store"
+import { useNotifications } from "@/hooks/use-notifications"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,9 +24,9 @@ export function CashierDashboard() {
   
   const { data: orders = [] } = useSWR(branch ? ["cashier-orders", branch.id] : null, () => apiClient.get(`/orders?branchId=${branch!.id}`).then((response) => response.data))
   const { data: lowStock = [] } = useSWR(branch ? ["cashier-low-stock", branch.id] : null, () => apiClient.get(`/inventory?branchId=${branch!.id}&lowStock=true`).then((response) => response.data))
-  const { data: tenant } = useSWR("/tenant", () => apiClient.get("/tenant").then((response) => response.data), { refreshInterval: 15000 })
+  const { notifications, mutate: refreshNotifications } = useNotifications()
   
-  const myResponses = (tenant?.settings?.cashierNotifications || [])
+  const myResponses = notifications
     .filter((n: any) => n.createdBy === user?.id && n.responses && n.responses.length > 0)
     .slice(0, 5);
   
@@ -58,6 +59,7 @@ export function CashierDashboard() {
     })
     setMessage("")
     setSent(true) 
+    refreshNotifications()
   }
 
   return (
@@ -231,7 +233,7 @@ export function CashierDashboard() {
           <CardDescription>Send an alert to the owner or managers</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 relative z-10">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button size="sm" type="button" variant={noticeType === "low_stock" ? "default" : "outline"} onClick={() => setNoticeType("low_stock")} className={noticeType === "low_stock" ? "bg-indigo-500 hover:bg-indigo-600 text-white border-transparent" : "border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10"}>
               Low stock
             </Button>
@@ -245,7 +247,7 @@ export function CashierDashboard() {
             placeholder={noticeType === "low_stock" ? "List the products that need restocking..." : "What are customers asking for that is not currently offered?"} 
             className="bg-black/40 border-indigo-500/20 focus-visible:ring-indigo-500/50 min-h-[100px] resize-none"
           />
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <Button onClick={notify} disabled={!message.trim()} className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20">
               <Send className="mr-2 h-4 w-4" />
               Send Notification

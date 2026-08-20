@@ -123,12 +123,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
 
   return (
-    <div className="h-screen overflow-hidden flex bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(236,72,153,0.14),_transparent_22%),linear-gradient(180deg,_rgba(10,14,30,1)_0%,_rgba(11,15,28,1)_100%)]">
+    <div className="h-[100dvh] overflow-hidden flex bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(236,72,153,0.14),_transparent_22%),linear-gradient(180deg,_rgba(10,14,30,1)_0%,_rgba(11,15,28,1)_100%)]">
 
       {/* ── Sidebar ─────────────────────────────────────────────── */}
       <aside
         className={`flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out border-r border-white/10 backdrop-blur-xl
-          ${isSidebarOpen ? "w-60" : "w-[72px]"}`}
+          ${isSidebarOpen ? "fixed inset-y-0 left-0 z-50 w-60 shadow-2xl sm:static sm:shadow-none" : "hidden sm:flex sm:w-[72px]"}`}
         style={{ background: "rgba(11, 15, 28, 0.82)" }}
       >
         {/* Logo */}
@@ -232,7 +232,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 flex flex-col min-w-0">
 
         {/* Top bar */}
-        <header className="relative h-14 flex-shrink-0 flex items-center justify-between px-4 border-b border-white/10"
+        <header className="relative h-14 flex-shrink-0 flex items-center justify-between gap-2 px-3 sm:px-4 border-b border-white/10"
           style={{ background: "rgba(13, 18, 34, 0.82)" }}>
 
           <button
@@ -247,7 +247,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="hidden sm:inline">SalesK</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <NotificationBell />
 
             {/* Branch selector */}
@@ -260,7 +260,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     const b = branches.find((br: any) => br.id === e.target.value)
                     if (b) setCurrentBranch(b)
                   }}
-                  className="text-sm pl-8 pr-8 py-1.5 rounded-lg appearance-none cursor-pointer
+                  className="max-w-28 sm:max-w-48 text-sm pl-8 pr-8 py-1.5 rounded-lg appearance-none cursor-pointer
                     border border-white/[0.08] bg-white/[0.05] text-white/70
                     hover:border-white/[0.15] focus:outline-none focus:border-cyan-500/50
                     transition-colors"
@@ -287,7 +287,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           {children}
         </div>
       </main>
